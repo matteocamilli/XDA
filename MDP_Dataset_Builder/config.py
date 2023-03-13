@@ -9,7 +9,7 @@ SS_VARIABLES = {
     "cruise speed": {"domain": float, "range": [0, 5]},
     #"bandwidth": {"domain": float, "range": [10, 50]},
     #"quality": {"domain": int, "range": [0, 2]},
-    "illuminance": {"domain": float, "range": [40, 120000]},
+    "illuminance": {"domain": float, "range": [0, 100]},
     #"smoke intensity": {"domain": int, "range": [0, 2]},
     #"obstacle size": {"domain": float, "range": [0, 120]},
     #"obstacle distance": {"domain": float, "range": [0, 10]},
