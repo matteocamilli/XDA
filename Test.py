@@ -50,12 +50,13 @@ def test():
         QuadraticDiscriminantAnalysis(),
     ]
 
-    ds = pd.read_csv('Datasets/data1.csv')
+    ds = pd.read_csv('Datasets/data-2ss.csv')
 
     figure = plt.figure(figsize=(27, 9))
     i = 1
     # preprocess dataset, split into training and test part
-    X, y = ds[["power", "cruise speed", "bandwidth", "quality", "illuminance", "smoke intensity", "obstacle size", "obstacle distance", "firm obstacle"]], ds["req_0"]
+    X, y = ds[["power", "cruise speed"]], ds["req_1"]
+    #, "bandwidth", "quality", "illuminance", "smoke intensity", "obstacle size", "obstacle distance", "firm obstacle"
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.4, random_state=42
     )
@@ -87,7 +88,7 @@ def test():
         clf = make_pipeline(StandardScaler(), clf)
         clf.fit(X_train, y_train)
         score = clf.score(X_test, y_test)
-        #DecisionBoundaryDisplay.from_estimator(clf, X, cmap=cm, alpha=0.8, ax=ax, eps=0.5)
+        DecisionBoundaryDisplay.from_estimator(clf, X, cmap=cm, alpha=0.8, ax=ax, eps=0.5)
 
         # Plot the training points
         ax.scatter(
