@@ -50,7 +50,7 @@ def test():
         QuadraticDiscriminantAnalysis(),
     ]
 
-    ds = pd.read_csv('data.csv')
+    ds = pd.read_csv('Datasets/data1.csv')
 
     figure = plt.figure(figsize=(27, 9))
     i = 1
