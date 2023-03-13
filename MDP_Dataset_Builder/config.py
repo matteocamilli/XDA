@@ -5,15 +5,15 @@ INDEX_TO_RUN = None  # 0
 TOTAL_TO_RUN = None  # 1
 
 SS_VARIABLES = {
-    "power": {"domain": int, "range": [0, 100]},
+    #"power": {"domain": int, "range": [0, 100]},
     "cruise speed": {"domain": float, "range": [0, 5]},
-    "bandwidth": {"domain": float, "range": [10, 50]},
-    "quality": {"domain": int, "range": [0, 2]},
+    #"bandwidth": {"domain": float, "range": [10, 50]},
+    #"quality": {"domain": int, "range": [0, 2]},
     "illuminance": {"domain": float, "range": [40, 120000]},
-    "smoke intensity": {"domain": int, "range": [0, 2]},
-    "obstacle size": {"domain": float, "range": [0, 120]},
-    "obstacle distance": {"domain": float, "range": [0, 10]},
-    "firm obstacle": {"domain": int, "range": [0, 1]},
+    #"smoke intensity": {"domain": int, "range": [0, 2]},
+    #"obstacle size": {"domain": float, "range": [0, 120]},
+    #"obstacle distance": {"domain": float, "range": [0, 10]},
+    #"firm obstacle": {"domain": int, "range": [0, 1]},
 }
 
 CONSTRAINT_EXAMPLE = {
