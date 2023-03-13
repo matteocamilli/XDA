@@ -1,0 +1,4 @@
+pymc3
+numpy==1.23.1
+pandas
+bambi
