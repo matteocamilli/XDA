@@ -1,5 +1,3 @@
-from math import exp
-
 import numpy as np
 
 
@@ -8,14 +6,15 @@ def do_nothing(old_probability: np.ndarray, variable_value) -> np.ndarray:
 
 
 def cruise_speed_s0_a(old_probability: np.ndarray, variable_value) -> np.ndarray:
-    if variable_value >= 2.3:
-        max_increment = 0.05
+    if variable_value >= 3:
+        max_increment = 0.03
 
-        increment = (max_increment * 100 - exp(-variable_value + 1.6)) / 100
+        offset = (variable_value - 3.) / 2.
+        offset **= 2
 
-        old_probability[0] += increment
-        old_probability[1] -= 2 * increment
-        old_probability[2] += increment
+        old_probability[0] += max_increment * offset
+        old_probability[1] -= 2 * max_increment * offset
+        old_probability[2] += max_increment * offset
 
     return old_probability
 
@@ -82,14 +81,15 @@ def quality_s0_a(old_probability: np.ndarray, variable_value) -> np.ndarray:
 
 
 def illuminance_s0_a(old_probability: np.ndarray, variable_value) -> np.ndarray:
-    if variable_value <= 30:
-        max_increment = 0.05
+    if variable_value <= 1000:
+        max_increment = 0.01
 
-        increment = (max_increment * 100 - exp(variable_value / 7 - 2.66)) / 100
+        offset = variable_value / 1000.
+        offset **= 3
 
-        old_probability[0] += increment
-        old_probability[1] -= 2 * increment
-        old_probability[2] += increment
+        old_probability[0] += max_increment * offset
+        old_probability[1] -= 2 * max_increment * offset
+        old_probability[2] += max_increment * offset
 
     return old_probability
 
@@ -337,8 +337,8 @@ SemanticSpaceVariable = [
         "Name": "illuminance",
         "Type": "SYS",
         "Domain": float,
-        "Range": [0, 100],
-        "Default": 0,
+        "Range": [40, 120000],
+        "Default": 40.0,
         "Combinations": [
             {
                 "StateId": "S0",

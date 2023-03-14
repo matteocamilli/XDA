@@ -50,7 +50,7 @@ def test():
         QuadraticDiscriminantAnalysis(),
     ]
 
-    ds = pd.read_csv('Datasets/data-missclassification-only.csv')
+    ds = pd.read_csv('Datasets/data1.csv')
 
     figure = plt.figure(figsize=(27, 9))
     i = 1
@@ -90,10 +90,12 @@ def test():
         score = clf.score(X_test, y_test)
         DecisionBoundaryDisplay.from_estimator(clf, X, cmap=cm, alpha=0.8, ax=ax, eps=0.5)
 
+        """
         # Plot the training points
         ax.scatter(
             X_train.iloc[:, 0], X_train.iloc[:, 1], c=y_train, cmap=cm_bright, edgecolors="k"
         )
+        """
         # Plot the testing points
         ax.scatter(
             X_test.iloc[:, 0],
