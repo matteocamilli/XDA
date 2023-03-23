@@ -50,7 +50,7 @@ def test():
         QuadraticDiscriminantAnalysis(),
     ]
 
-    ds = pd.read_csv('Datasets/data1.csv')
+    ds = pd.read_csv('Datasets/data-missclassification-only.csv')
 
     figure = plt.figure(figsize=(27, 9))
     i = 1
@@ -95,7 +95,6 @@ def test():
         ax.scatter(
             X_train.iloc[:, 0], X_train.iloc[:, 1], c=y_train, cmap=cm_bright, edgecolors="k"
         )
-        """
         # Plot the testing points
         ax.scatter(
             X_test.iloc[:, 0],
@@ -105,6 +104,7 @@ def test():
             edgecolors="k",
             alpha=0.6,
         )
+        """
 
         ax.set_xlim(x_min, x_max)
         ax.set_ylim(y_min, y_max)
