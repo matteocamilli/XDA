@@ -50,13 +50,13 @@ def test():
         QuadraticDiscriminantAnalysis(),
     ]
 
-    ds = pd.read_csv('Datasets/data-missclassification-only.csv')
+    ds = pd.read_csv('../Datasets/data1.csv')
 
     figure = plt.figure(figsize=(27, 9))
     i = 1
     # preprocess dataset, split into training and test part
     X, y = ds[["cruise speed", "illuminance"]], ds["req_0"]
-    #, "bandwidth", "quality", "illuminance", "smoke intensity", "obstacle size", "obstacle distance", "firm obstacle"
+    #, "bandwidth", "quality", "power", "smoke intensity", "obstacle size", "obstacle distance", "firm obstacle"
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.4, random_state=42
     )
