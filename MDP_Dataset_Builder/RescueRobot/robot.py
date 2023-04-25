@@ -2,6 +2,13 @@ from math import exp
 
 import numpy as np
 
+def step_function(x, step, speed):
+    atan0 = np.arctan(-speed*step)
+    atan1 = np.arctan(speed*(1-step))
+    a = atan0 if step > 0 else atan1
+    m = np.sign(speed) / (atan1 - atan0)
+    return m * (np.arctan(speed * (x - step)) - a)
+
 def segment(x, x1, x2, y1, y2):
     return (x - x1) / (x2 - x1) * (y2 - y1) + y1
 
