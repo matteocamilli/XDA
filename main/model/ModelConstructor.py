@@ -16,17 +16,15 @@ from sklearn.metrics import roc_auc_score
 
 def constructModel():
 
-    ds = pd.read_csv('datasets/data1.csv')
+    ds = pd.read_csv('datasets/data.csv')
     features = ["power",
                 "cruise speed",
-                "bandwidth",
-                "quality",
                 "illuminance",
                 "smoke intensity",
                 "obstacle size",
                 "obstacle distance",
                 "firm obstacle"]
-    outcomes = ["req_0"]
+    outcomes = ["req_1"]
     # , "req_1", "req_2", "req_3", "req_4", "req_5"
     X = ds.loc[:, features]
     y = ds.loc[:, outcomes]
