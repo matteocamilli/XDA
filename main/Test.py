@@ -67,7 +67,7 @@ def test():
     cm = plt.cm.RdBu
     cm_bright = ListedColormap(["#FF0000", "#0000FF"])
     ax = plt.subplot(1, len(classifiers) + 1, i)
-    ax.set_title("Input data")
+    ax.set_title("Input data.csv")
     # Plot the training points
     ax.scatter(X_train.iloc[:, 0], X_train.iloc[:, 1], c=y_train, cmap=cm_bright, edgecolors="k")
     # Plot the testing points

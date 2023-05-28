@@ -8,7 +8,7 @@ df = df.drop(columns=["req_1", "req_2", "req_3", "req_4", "req_5"])
 df['req_0'] = df['req_0'].astype(float)
 df.rename(columns={'req_0': 'y'}, inplace=True)
 
-# copy the data
+# copy the data.csv
 df_old = df
 df = df_old.copy()
 

@@ -1,6 +1,7 @@
 # Import for Construct Defect Models (Classification)
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 from numpy import ravel
 from IPython.display import display
 from sklearn.linear_model import LogisticRegression # Logistic Regression
@@ -14,27 +15,7 @@ import xgboost as xgb # eXtreme Gradient Boosting Tree (xGBTree)
 # Import for AUC calculation
 from sklearn.metrics import roc_auc_score
 
-def constructModel():
-
-    ds = pd.read_csv('datasets/data.csv')
-    features = ["power",
-                "cruise speed",
-                "illuminance",
-                "smoke intensity",
-                "obstacle size",
-                "obstacle distance",
-                "firm obstacle"]
-    outcomes = ["req_1"]
-    # , "req_1", "req_2", "req_3", "req_4", "req_5"
-    X = ds.loc[:, features]
-    y = ds.loc[:, outcomes]
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.4, random_state=42
-    )
-
-    y_test = ravel(y_test)
-    y_train = ravel(y_train)
+def constructModel(X_train, X_test, y_train, y_test, export = False):
 
     ## Construct defect models
 
@@ -79,3 +60,9 @@ def constructModel():
     # Visualise the performance of defect models
     display(model_performance_df)
     model_performance_df.plot(kind='barh', y='AUC', x='Model')
+    plt.tight_layout()
+    plt.show()
+
+    # goup models in list
+    models = [lr_model, rf_model, dt_model, nn_model, gbm_model, xgb_model]
+    return models

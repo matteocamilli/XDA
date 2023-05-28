@@ -48,6 +48,7 @@ def evaluateDTH(rf_model, X_test, y_test):
     rf_recall_function = recall_score(y_test, rf_model.predict(X_test))
 
     # calculate FAR manually
+    tn, fp, fn, tp = confusion_matrix(y_test, rf_model.predict(X_test)).ravel()
     rf_FAR_manual = fp / (fp + tn)
 
     # calculate D2H manually
