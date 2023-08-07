@@ -58,11 +58,13 @@ def constructModel(X_train, X_test, y_train, y_test, export = False):
     model_performance_df = model_performance_df.sort_values(by = ['AUC'], ascending = False)
 
     # Visualise the performance of defect models
-    display(model_performance_df)
-    model_performance_df.plot(kind='barh', y='AUC', x='Model')
-    plt.tight_layout()
-    plt.show()
+    if export:
+        display(model_performance_df)
+        model_performance_df.plot(kind='barh', y='AUC', x='Model')
+        plt.tight_layout()
+        plt.savefig('../plots/AUC.png')
+        plt.show()
 
     # goup models in list
-    models = [lr_model, rf_model, dt_model, nn_model, gbm_model, xgb_model]
+    models = [nn_model]#[lr_model, rf_model, dt_model, nn_model, gbm_model, xgb_model]
     return models

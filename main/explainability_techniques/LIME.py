@@ -18,7 +18,8 @@ def explain(explainer, model, data_row):
     )
     #exp.show_in_notebook(show_table = True)
 
-    fig = exp.as_pyplot_figure()
-
+    exp.as_pyplot_figure()
     plt.tight_layout()
     plt.show()
+
+    return exp

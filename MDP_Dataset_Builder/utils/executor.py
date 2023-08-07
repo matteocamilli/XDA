@@ -4,6 +4,7 @@ from utils.file_proxy import dump_ss_variables, build_output_csv
 from utils.constraints import *
 import numpy as np
 
+PATH_TO_DATASET = "./starting_combinations.npy"
 
 def __single_execution(ss_variables: dict, input_variables: np.ndarray) -> MDP:
     variables_to_exec = dict()
@@ -16,12 +17,15 @@ def __single_execution(ss_variables: dict, input_variables: np.ndarray) -> MDP:
     return computed_mdp
 
 
-def run(ss_variables: dict, index: int, total: int, constraints: list[dict]):
+def run(ss_variables: dict, index: int, total: int, constraints: list[dict], path_to_dataset = None):
+    global PATH_TO_DATASET
     assert index < total
 
     constraints_satisfaction_output = []
 
-    total_dataset = np.load("./starting_combinations.npy")
+    if path_to_dataset is not None: PATH_TO_DATASET = path_to_dataset
+
+    total_dataset = np.load(PATH_TO_DATASET)
     total_elements = total_dataset.shape[0]
 
     starting_index = int((total_elements / total) * index)

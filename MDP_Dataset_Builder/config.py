@@ -3,6 +3,7 @@ import argparse
 MAX_SAMPLES = None  # 1000
 INDEX_TO_RUN = None  # 0
 TOTAL_TO_RUN = None  # 1
+PATH_TO_DATASET = None # "./starting_combinations.npy"
 
 SS_VARIABLES = {
     "power": {"domain": int, "range": [0, 100]},
@@ -84,6 +85,7 @@ all_args = argparse.ArgumentParser()
 all_args.add_argument("-m", "--max-samples", required=False, help="Max Samples to generate", type=int)
 all_args.add_argument("-i", "--index-to-run", required=False, help="Index of this execution", type=int)
 all_args.add_argument("-t", "--total-executions", required=False, help="Index of this execution", type=int)
+all_args.add_argument("-p", "--path-to-dataset", required=False, help="Path to the dataset", type=str)
 
 args, _ = all_args.parse_known_args()
 args = vars(args)
@@ -101,3 +103,7 @@ if args.get("index_to_run") is not None:
 if args.get("total_executions") is not None:
     print(f"Total executions: {args.get('total_executions')}")
     TOTAL_TO_RUN = args.get("total_executions")
+
+if args.get("path-to-dataset") is not None:
+    print(f"Using dataset: {args.get('path-to-dataset')}")
+    PATH_TO_DATASET = args.get("path-to-dataset")

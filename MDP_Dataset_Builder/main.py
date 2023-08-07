@@ -12,8 +12,8 @@ def create_dataset(ss_variables, max_expected, random_sampling=False):
     dump_sets_to_csv(sets)
 
 
-def compute_results(ss_variables, index_to_run, total_to_train, constraints):
-    result = executor.run(ss_variables, index_to_run, total_to_train, constraints)
+def compute_results(ss_variables, index_to_run, total_to_train, constraints, path_to_dataset):
+    result = executor.run(ss_variables, index_to_run, total_to_train, constraints, path_to_dataset)
     build_output_csv(ss_variables, result['input_data'], result['output_data'], f"{index_to_run}-{total_to_train}.csv")
 
 
@@ -26,4 +26,4 @@ if __name__ == "__main__":
         create_dataset(config.SS_VARIABLES, config.MAX_SAMPLES, random_sampling=True)
     if config.INDEX_TO_RUN is not None and config.TOTAL_TO_RUN is not None:
         print(f"Running {config.INDEX_TO_RUN} out of {config.TOTAL_TO_RUN}")
-        compute_results(config.SS_VARIABLES, config.INDEX_TO_RUN, config.TOTAL_TO_RUN, config.CONSTRAINTS)
+        compute_results(config.SS_VARIABLES, config.INDEX_TO_RUN, config.TOTAL_TO_RUN, config.CONSTRAINTS, config.PATH_TO_DATASET)
