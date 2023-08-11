@@ -3,15 +3,16 @@ import numpy as np
 import pandas as pd
 
 DEFAULT_SS_VARIABLES = {
-    "power": 0,
     "cruise speed": 0.0,
-    "bandwidth": 10.0,
-    "quality": 0,
-    "illuminance": 40.0,
+    "image resolution": 50.0,
+    "flashlight intensity": 50.0,
+    "suspension responsiveness": 50.0,
+    "power": 0,
+    "illuminance": 50.0,
     "smoke intensity": 0,
     "obstacle size": 0.0,
     "obstacle distance": 0.0,
-    "firm obstacle": 0,
+    "firm obstacle": 1,
 }
 
 

@@ -1,6 +1,6 @@
 @echo off
 
-set MAX_SAMPLES=16
+set MAX_SAMPLES=1000
 set TOTAL_THREADS=8
 set NUM_THREADS=0
 

@@ -14,7 +14,7 @@ if __name__ == '__main__':
     features = ["cruise speed",
                 #"image resolution",
                 #"flashlight intensity",
-                #"fog light intensity",
+                #"suspension responsiveness",
                 "power",
                 "illuminance",
                 "smoke intensity",

@@ -7,9 +7,9 @@ PATH_TO_DATASET = None # "./starting_combinations.npy"
 
 SS_VARIABLES = {
     "cruise speed": {"domain": float, "range": [0, 100]},
-    #"image resolution": {"domain": float, "range": [0, 100]},
-    #"flashlight intensity": {"domain": float, "range": [0, 100]},
-    #"fog light intensity": {"domain": float, "range": [0, 100]},
+    "image resolution": {"domain": float, "range": [0, 100]},
+    "flashlight intensity": {"domain": float, "range": [0, 100]},
+    "suspension responsiveness": {"domain": float, "range": [0, 100]},
     "power": {"domain": int, "range": [0, 100]},
     "illuminance": {"domain": float, "range": [0, 100]},
     "smoke intensity": {"domain": float, "range": [0, 100]},
