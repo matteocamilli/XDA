@@ -12,16 +12,15 @@ if __name__ == '__main__':
 
     ds = pd.read_csv('../datasets/data.csv')
     features = ["cruise speed",
-                #"image resolution",
-                #"flashlight intensity",
-                #"suspension responsiveness",
-                "power",
+                "image resolution",
                 "illuminance",
+                "controls responsiveness",
+                "power",
                 "smoke intensity",
                 "obstacle size",
                 "obstacle distance",
                 "firm obstacle"]
-    outcomes = ["req_4"]            # , "req_1", "req_2", "req_3", "req_4", "req_5"
+    outcomes = ["req_1"]            # "req_0", "req_1", "req_2", "req_3", "req_4"
     X = ds.loc[:, features]
     y = ds.loc[:, outcomes]
 
@@ -32,48 +31,47 @@ if __name__ == '__main__':
     y_test = ravel(y_test)
     y_train = ravel(y_train)
 
-    models = constructModel(X_train, X_test, y_train, y_test)
+    bestModel = constructModel(X_train, X_test, y_train, y_test)
 
-    """
     couplesOfFeatures = []
     featureToCycles = features.copy()
     for f1 in features:
         featureToCycles.remove(f1)
         for f2 in featureToCycles:
-            couplesOfFeatures.append((f1, f2))
-            
-    for m in models:
-        path = '../plots/' + m.__class__.__name__
+            couplesOfFeatures.append((f1, f2))   
+
+        path = '../plots/' + bestModel.__class__.__name__
         if not os.path.exists(path): os.makedirs(path)
         
-        for f in features:
-            path = 'plots/' + m.__class__.__name__ + '/individuals'
-            if not os.path.exists(path): os.makedirs(path)
-            partial_dependence_plot(m, X_train, [f], "both", path + '/' + f + '.png')
-            
-        for c in couplesOfFeatures:
-            path = 'plots/' + m.__class__.__name__ + '/couples'
-            if not os.path.exists(path): os.makedirs(path)
-            partial_dependence_plot(m, X_train, [c], "average", path + '/' + c[0] + ' % ' + c[1] + '.png')
+    for f in features:
+        path = '../plots/' + bestModel.__class__.__name__ + '/individuals'
+        if not os.path.exists(path): os.makedirs(path)
+        partial_dependence_plot(bestModel, X_train, [f], "both", path + '/' + f + '.png')
+
+    """
+    for c in couplesOfFeatures:
+        path = '../plots/' + bestModel.__class__.__name__ + '/couples'
+        if not os.path.exists(path): os.makedirs(path)
+        partial_dependence_plot(bestModel, X_train, [c], "average", path + '/' + c[0] + ' % ' + c[1] + '.png')
     """
 
-
+    """
     explainer = createLIMEExplainer(X_train)
     data_row = X_test.iloc[50]
 
-    for m in models:
-        explaination = explain(explainer, m, data_row)
-        local_exp = explaination.local_exp[1]
-        local_exp.sort(key=lambda k: k[0])
-        for i in range(len(features)):
-            local_exp[i] = (features[i], local_exp[i][1])
-        local_exp.sort(key=lambda k: k[1])
-        #print(local_exp)
+    explaination = explain(explainer, bestModel, data_row)
+    local_exp = explaination.local_exp[1]
+    local_exp.sort(key=lambda k: k[0])
+    for i in range(len(features)):
+        local_exp[i] = (features[i], local_exp[i][1])
+    local_exp.sort(key=lambda k: k[1])
+    #print(local_exp)
+    """
 
-
-
+    """
     os.chdir("../MDP_Dataset_Builder")
     mod_dataset = X.to_numpy(copy=True)                         #.loc[0:10, :]. to test only part of the dataset
     np.save("./starting_combinations.npy", mod_dataset)
     os.system("execute.bat ./starting_combinations.npy")
     os.system("merge_csvs.py")
+    """

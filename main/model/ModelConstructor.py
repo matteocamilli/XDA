@@ -49,13 +49,27 @@ def constructModel(X_train, X_test, y_train, y_test, export = False):
     xgb_model.fit(X_train, y_train)
     xgb_model_AUC = round(roc_auc_score(y_test, xgb_model.predict_proba(X_test)[:,1]), 3)
 
+    models = {
+        'Logistic Regression': lr_model,
+        'Random Forests': rf_model,
+        'C5.0 (Decision Tree)': dt_model,
+        'Neural Network': nn_model,
+        'Gradient Boosting Machine (GBM)': gbm_model,
+        'eXtreme Gradient Boosting Tree (xGBTree)': xgb_model,
+    }
+
     # Summarise into a DataFrame
-    model_performance_df = pd.DataFrame(data=np.array([['Logistic Regression', 'Random Forests', 'C5.0 (Decision Tree)', 'Neural Network', 'Gradient Boosting Machine (GBM)', 'eXtreme Gradient Boosting Tree (xGBTree)'],
+    model_performance_df = pd.DataFrame(data=np.array([list(models.keys()),
                 [lr_model_AUC, rf_model_AUC, dt_model_AUC, nn_model_AUC, gbm_model_AUC, xgb_model_AUC]]).transpose(),
                 index = range(6),
                 columns = ['Model', 'AUC'])
     model_performance_df['AUC'] = model_performance_df.AUC.astype(float)
     model_performance_df = model_performance_df.sort_values(by = ['AUC'], ascending = False)
+
+    bestModel = model_performance_df.iloc[0][0]
+
+    print(model_performance_df)
+    print('Best model is: ' + bestModel)
 
     # Visualise the performance of defect models
     if export:
@@ -66,5 +80,6 @@ def constructModel(X_train, X_test, y_train, y_test, export = False):
         plt.show()
 
     # goup models in list
-    models = [nn_model]#[lr_model, rf_model, dt_model, nn_model, gbm_model, xgb_model]
-    return models
+    #models = [lr_model, rf_model, dt_model, nn_model, gbm_model, xgb_model]
+
+    return models[bestModel]
