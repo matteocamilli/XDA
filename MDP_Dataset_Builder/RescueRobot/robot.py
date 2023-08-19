@@ -17,53 +17,63 @@ def do_nothing(old_probability: np.ndarray, variable_value) -> np.ndarray:
 
 def power_s0_a(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
-    old_probability[0] += increment
-    old_probability[2] += increment
+    old_probability[0] += increment / 2
+    old_probability[2] += increment / 2
     old_probability[1] *= multiplier
+
+    return old_probability
 
 def cruise_speed_s0_a(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
-    old_probability[0] += increment
-    old_probability[2] += increment
+    old_probability[0] += increment / 2
+    old_probability[2] += increment / 2
     old_probability[1] *= multiplier
+
+    return old_probability
 
 def image_resolution_s0_a(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value/100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
-    old_probability[0] += increment
-    old_probability[2] += increment
+    old_probability[0] += increment / 2
+    old_probability[2] += increment / 2
     old_probability[1] *= multiplier
 
     return old_probability
 
 def illuminance_s0_a(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
-    old_probability[0] += increment
-    old_probability[2] += increment
+    old_probability[0] += increment / 2
+    old_probability[2] += increment / 2
     old_probability[1] *= multiplier
+
+    return old_probability
 
 def smoke_intensity_s0_a(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
-    old_probability[0] += increment
-    old_probability[2] += increment
+    old_probability[0] += increment / 2
+    old_probability[2] += increment / 2
     old_probability[1] *= multiplier
+
+    return old_probability
 
 def obstacle_distance_s0_a(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
-    old_probability[0] += increment
-    old_probability[2] += increment
+    old_probability[0] += increment / 2
+    old_probability[2] += increment / 2
     old_probability[1] *= multiplier
+
+    return old_probability
 
 def firm_obstacle_s0_a(old_probability: np.ndarray, variable_value) -> np.ndarray:
     if variable_value == 1:
@@ -77,7 +87,7 @@ def firm_obstacle_s0_a(old_probability: np.ndarray, variable_value) -> np.ndarra
 
 def power_s0_b(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
     old_probability[0] += increment
     old_probability[1] *= multiplier
@@ -86,7 +96,7 @@ def power_s0_b(old_probability: np.ndarray, variable_value) -> np.ndarray:
 
 def cruise_speed_s0_b(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
     old_probability[0] += increment
     old_probability[1] *= multiplier
@@ -95,7 +105,7 @@ def cruise_speed_s0_b(old_probability: np.ndarray, variable_value) -> np.ndarray
 
 def image_resolution_s0_b(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value/100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
     old_probability[0] += increment
     old_probability[1] *= multiplier
@@ -104,7 +114,7 @@ def image_resolution_s0_b(old_probability: np.ndarray, variable_value) -> np.nda
 
 def illuminance_s0_b(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
     old_probability[0] += increment
     old_probability[1] *= multiplier
@@ -113,7 +123,7 @@ def illuminance_s0_b(old_probability: np.ndarray, variable_value) -> np.ndarray:
 
 def smoke_intensity_s0_b(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
     old_probability[0] += increment
     old_probability[1] *= multiplier
@@ -122,7 +132,7 @@ def smoke_intensity_s0_b(old_probability: np.ndarray, variable_value) -> np.ndar
 
 def obstacle_size_s0_b(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
     old_probability[0] += increment
     old_probability[1] *= multiplier
@@ -131,7 +141,7 @@ def obstacle_size_s0_b(old_probability: np.ndarray, variable_value) -> np.ndarra
 
 def obstacle_distance_s0_b(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[1] * (1 - multiplier)
 
     old_probability[0] += increment
     old_probability[1] *= multiplier
@@ -149,30 +159,30 @@ def firm_obstacle_s0_b(old_probability: np.ndarray, variable_value) -> np.ndarra
 
 def cruise_speed_s5_g(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[2] * (1 - multiplier)
 
-    old_probability[0] += increment
-    old_probability[1] += increment
+    old_probability[0] += increment / 2
+    old_probability[1] += increment / 2
     old_probability[2] *= multiplier
 
     return old_probability
 
 def obstacle_distance_s5_g(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[2] * (1 - multiplier)
 
-    old_probability[0] += increment
-    old_probability[1] += increment
+    old_probability[0] += increment / 2
+    old_probability[1] += increment / 2
     old_probability[2] *= multiplier
 
     return old_probability
 
 def controls_responsiveness_s5_g(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value/100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier) / 2
+    increment = old_probability[2] * (1 - multiplier)
 
-    old_probability[0] += increment
-    old_probability[1] += increment
+    old_probability[0] += increment / 2
+    old_probability[1] += increment / 2
     old_probability[2] *= multiplier
 
     return old_probability
@@ -216,7 +226,7 @@ def controls_responsiveness_s6_h(old_probability: np.ndarray, variable_value) ->
 
 def power_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -225,7 +235,7 @@ def power_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarray:
 
 def cruise_speed_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -233,8 +243,8 @@ def cruise_speed_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarray
     return old_probability
 
 def image_resolution_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarray:
-    multiplier = step_function(variable_value/100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    multiplier = step_function(variable_value / 100, 0.01, 40)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -243,7 +253,7 @@ def image_resolution_s8_j(old_probability: np.ndarray, variable_value) -> np.nda
 
 def controls_responsiveness_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -252,7 +262,7 @@ def controls_responsiveness_s8_j(old_probability: np.ndarray, variable_value) ->
 
 def illuminance_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -261,7 +271,7 @@ def illuminance_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarray:
 
 def smoke_intensity_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -270,7 +280,7 @@ def smoke_intensity_s8_j(old_probability: np.ndarray, variable_value) -> np.ndar
 
 def obstacle_size_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -279,7 +289,7 @@ def obstacle_size_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarra
 
 def obstacle_distance_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -297,7 +307,7 @@ def firm_obstacle_s8_j(old_probability: np.ndarray, variable_value) -> np.ndarra
 
 def power_s10_l(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -306,7 +316,7 @@ def power_s10_l(old_probability: np.ndarray, variable_value) -> np.ndarray:
 
 def cruise_speed_s10_l(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -315,7 +325,7 @@ def cruise_speed_s10_l(old_probability: np.ndarray, variable_value) -> np.ndarra
 
 def image_resolution_s10_l(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value/100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -324,7 +334,7 @@ def image_resolution_s10_l(old_probability: np.ndarray, variable_value) -> np.nd
 
 def controls_responsiveness_s10_l(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -333,7 +343,7 @@ def controls_responsiveness_s10_l(old_probability: np.ndarray, variable_value) -
 
 def illuminance_s10_l(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -342,7 +352,7 @@ def illuminance_s10_l(old_probability: np.ndarray, variable_value) -> np.ndarray
 
 def smoke_intensity_s10_l(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -351,7 +361,7 @@ def smoke_intensity_s10_l(old_probability: np.ndarray, variable_value) -> np.nda
 
 def obstacle_size_s10_l(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(1 - variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier
@@ -360,7 +370,7 @@ def obstacle_size_s10_l(old_probability: np.ndarray, variable_value) -> np.ndarr
 
 def obstacle_distance_s10_l(old_probability: np.ndarray, variable_value) -> np.ndarray:
     multiplier = step_function(variable_value / 100, 0.01, 40)
-    increment = old_probability[1] * (1 - multiplier)
+    increment = old_probability[0] * (1 - multiplier)
 
     old_probability[1] += increment
     old_probability[0] *= multiplier

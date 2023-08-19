@@ -1,7 +1,7 @@
 @echo off
 
-set MAX_SAMPLES=1000
-set TOTAL_THREADS=8
+set MAX_SAMPLES=500
+set TOTAL_THREADS=16
 set NUM_THREADS=0
 
 python .\main.py --max-samples %MAX_SAMPLES%
