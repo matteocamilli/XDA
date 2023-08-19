@@ -7,10 +7,11 @@ from sklearn.model_selection import train_test_split
 from explainability_techniques.LIME import createLIMEExplainer, explain
 from explainability_techniques.PDP import partial_dependence_plot, partial_dependence_plot
 from model.ModelConstructor import constructModel
+from genetic_algorithm.NSGA3 import nsga3
 
 if __name__ == '__main__':
 
-    ds = pd.read_csv('../datasets/data.csv')
+    ds = pd.read_csv('../datasets/dataset500.csv')
     features = ["cruise speed",
                 "image resolution",
                 "illuminance",
@@ -33,7 +34,9 @@ if __name__ == '__main__':
 
     bestModel = constructModel(X_train, X_test, y_train, y_test)
 
-    couplesOfFeatures = []
+    res = nsga3(bestModel, X_test.iloc[10, 4:9].to_numpy(), features)
+
+    """couplesOfFeatures = []
     featureToCycles = features.copy()
     for f1 in features:
         featureToCycles.remove(f1)
@@ -47,7 +50,7 @@ if __name__ == '__main__':
         path = '../plots/' + bestModel.__class__.__name__ + '/individuals'
         if not os.path.exists(path): os.makedirs(path)
         partial_dependence_plot(bestModel, X_train, [f], "both", path + '/' + f + '.png')
-
+    """
     """
     for c in couplesOfFeatures:
         path = '../plots/' + bestModel.__class__.__name__ + '/couples'
