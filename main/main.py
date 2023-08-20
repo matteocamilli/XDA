@@ -1,4 +1,4 @@
-import os
+import time
 import pandas as pd
 import numpy as np
 from numpy import ravel
@@ -11,8 +11,8 @@ from genetic_algorithm.NSGA3 import nsga3
 
 if __name__ == '__main__':
 
-    ds = pd.read_csv('../datasets/dataset500.csv')
-    features = ["cruise speed",
+    ds = pd.read_csv('/Users/nico/PycharmProjects/ml-explainability/datasets/dataset500.csv')
+    featureNames = ["cruise speed",
                 "image resolution",
                 "illuminance",
                 "controls responsiveness",
@@ -22,7 +22,7 @@ if __name__ == '__main__':
                 "obstacle distance",
                 "firm obstacle"]
     outcomes = ["req_1"]            # "req_0", "req_1", "req_2", "req_3", "req_4"
-    X = ds.loc[:, features]
+    X = ds.loc[:, featureNames]
     y = ds.loc[:, outcomes]
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -34,7 +34,20 @@ if __name__ == '__main__':
 
     bestModel = constructModel(X_train, X_test, y_train, y_test)
 
-    res = nsga3(bestModel, X_test.iloc[10, 4:9].to_numpy(), features)
+    constantFeatures = X_test.iloc[10, 4:9].to_numpy()
+
+    startTime = time.time()
+    res = nsga3(bestModel, constantFeatures, featureNames)
+    endTime = time.time()
+
+    print("\nPossible adaptations:")
+    print(res.X)
+
+    print("\nModel confidence:")
+    xFull = np.c_[res.X, np.tile(constantFeatures, (res.X.shape[0], 1))]
+    print(bestModel.predict_proba(pd.DataFrame(xFull, columns=featureNames))[:, 1])
+
+    print("\nNSGA3 execution time: " + str(endTime - startTime) + " s")
 
     """couplesOfFeatures = []
     featureToCycles = features.copy()
