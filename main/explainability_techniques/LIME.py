@@ -23,3 +23,15 @@ def explain(explainer, model, data_row):
     plt.show()
 
     return exp
+
+def sort_variables_from_LIME(X_train, model, data_row, features):
+    explainer = createLIMEExplainer(X_train)
+
+    explaination = explain(explainer, model, data_row)
+    local_exp = explaination.local_exp[1]
+    local_exp.sort(key=lambda k: k[0])
+    for i in range(len(features)):
+        local_exp[i] = (features[i], local_exp[i][1])
+    local_exp.sort(key=lambda k: k[1])
+
+    return local_exp

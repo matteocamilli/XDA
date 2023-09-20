@@ -1,6 +1,7 @@
-import time
 import pandas as pd
 import numpy as np
+import requests
+from matplotlib import pyplot as plt
 from numpy import ravel
 from sklearn.model_selection import train_test_split
 
@@ -8,10 +9,11 @@ from explainability_techniques.LIME import createLIMEExplainer, explain
 from explainability_techniques.PDP import partial_dependence_plot, partial_dependence_plot
 from model.ModelConstructor import constructModel
 from genetic_algorithm.NSGA3 import nsga3
+from custom_algorithm import skyline_finder
 
 if __name__ == '__main__':
 
-    ds = pd.read_csv('/Users/nico/PycharmProjects/ml-explainability/datasets/dataset500.csv')
+    ds = pd.read_csv('../datasets/dataset500.csv')
     featureNames = ["cruise speed",
                 "image resolution",
                 "illuminance",
@@ -34,22 +36,24 @@ if __name__ == '__main__':
 
     bestModel = constructModel(X_train, X_test, y_train, y_test)
 
-    constantFeatures = X_test.iloc[10, 4:9].to_numpy()
 
-    startTime = time.time()
-    res = nsga3(bestModel, constantFeatures, featureNames)
-    endTime = time.time()
 
-    print("\nPossible adaptations:")
-    print(res.X)
+    """
+    mod_dataset = X.to_numpy(copy=True)
 
-    print("\nModel confidence:")
-    xFull = np.c_[res.X, np.tile(constantFeatures, (res.X.shape[0], 1))]
-    print(bestModel.predict_proba(pd.DataFrame(xFull, columns=featureNames))[:, 1])
+    for i in range(mod_dataset.shape[0]):
+        if y.iloc[i].bool:
+            print("Row: " + str(i))
+            constantFeatures = mod_dataset[i, 4:9]
 
-    print("\nNSGA3 execution time: " + str(endTime - startTime) + " s")
+            res = nsga3(bestModel, constantFeatures, featureNames)
 
-    """couplesOfFeatures = []
+            if res.X is not None:
+                mod_dataset[i, 0:4] = res.X[0]          #choose the best option
+    """
+
+    """
+    couplesOfFeatures = []
     featureToCycles = features.copy()
     for f1 in features:
         featureToCycles.remove(f1)
@@ -72,16 +76,9 @@ if __name__ == '__main__':
     """
 
     """
-    explainer = createLIMEExplainer(X_train)
     data_row = X_test.iloc[50]
-
-    explaination = explain(explainer, bestModel, data_row)
-    local_exp = explaination.local_exp[1]
-    local_exp.sort(key=lambda k: k[0])
-    for i in range(len(features)):
-        local_exp[i] = (features[i], local_exp[i][1])
-    local_exp.sort(key=lambda k: k[1])
-    #print(local_exp)
+    local_exp = sort_variables_from_LIME(X_train, bestmodel, data_row, features)
+    print(local_exp)
     """
 
     """
