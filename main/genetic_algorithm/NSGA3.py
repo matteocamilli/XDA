@@ -24,10 +24,9 @@ class Adaptation(Problem):
         f4 = x[:, 3]
 
         out["F"] = [f1, f2, f3, f4]
-        out["G"] = 0.8 - self.model.predict_proba(pd.DataFrame(xFull, columns=self.featureNames))[:, 1]
+        out["G"] = 0.8 - self.model.predict_proba(xFull)[:, 1]
 
 def nsga3(model, constantFeatures, featureNames):
-    startTime = time.time()
 
     # create the reference directions to be used for the optimization
     ref_dirs = get_reference_directions("das-dennis", 4, n_partitions=12)
@@ -49,17 +48,5 @@ def nsga3(model, constantFeatures, featureNames):
                    termination=termination)
 
     #Scatter().add(res.F).show()
-
-    endTime = time.time()
-
-    print("\nPossible adaptations:")
-    print(res.X)
-
-    if res.X is not None:
-        print("\nModel confidence:")
-        xFull = np.c_[res.X, np.tile(constantFeatures, (res.X.shape[0], 1))]
-        print(model.predict_proba(pd.DataFrame(xFull, columns=featureNames))[:, 1])
-
-    print("\nNSGA3 execution time: " + str(endTime - startTime) + " s")
 
     return res

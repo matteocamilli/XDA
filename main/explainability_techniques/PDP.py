@@ -10,9 +10,7 @@ def partial_dependence_plot(model, X_train, features, kind, pathName=None):
     plt.show()
     return pdp
 
-def partial_dependence_max_value(model, X_train, feature):
-    pdp = partial_dependence_plot(model, X_train, [feature], "both")
-
+def partial_dependence_max_value(pdp):
     data = pdp.lines_[0, 0, 60].get_data(True)
     probs = data[1]
     var = data[0]

@@ -16,22 +16,16 @@ def explain(explainer, model, data_row):
         data_row,
         predict_fn = model.predict_proba
     )
-    #exp.show_in_notebook(show_table = True)
-
-    exp.as_pyplot_figure()
-    plt.tight_layout()
-    plt.show()
 
     return exp
 
-def sort_variables_from_LIME(X_train, model, data_row, features):
-    explainer = createLIMEExplainer(X_train)
+def printLime(explaination):
+    explaination.as_pyplot_figure()
+    plt.tight_layout()
+    plt.show()
 
-    explaination = explain(explainer, model, data_row)
+def sort_variables_from_LIME(explaination):
     local_exp = explaination.local_exp[1]
-    local_exp.sort(key=lambda k: k[0])
-    for i in range(len(features)):
-        local_exp[i] = (features[i], local_exp[i][1])
     local_exp.sort(key=lambda k: k[1])
 
     return local_exp
