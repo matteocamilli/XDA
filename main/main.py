@@ -1,3 +1,4 @@
+import sys
 import math
 import os
 import time
@@ -15,6 +16,7 @@ from custom_algorithm import skyline_finder
 
 if __name__ == '__main__':
 
+    os.chdir(sys.path[0])
     ds = pd.read_csv('../datasets/dataset500.csv')
     featureNames = ["cruise speed",
                     "image resolution",
@@ -88,6 +90,7 @@ if __name__ == '__main__':
         adaptation[featureIndex] = adaptation[featureIndex] + np.sign(maxPoints[featureIndex] - adaptation[featureIndex]) * delta
         lastProba = bestModel.predict_proba([adaptation])[0, 1]
         # print(lastProba)
+        # calculate the next delta
         delta = max(minDelta, abs(targetProba - lastProba) * minDelta * 20)  # just heuristic... can be done better
     endTime = time.time()
     customTime = endTime - startTime
