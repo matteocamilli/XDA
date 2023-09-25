@@ -66,13 +66,17 @@ if __name__ == '__main__':
         maxPoints.append(pdp.getMaxPoint(pdps[i]))
 
     targetProba = 0.8
+
     variableMin = 0
     variableMax = 100
     variableDomainSize = variableMax - variableMin
 
-    adaptation = np.copy(row)
     minDelta = variableDomainSize / 100
+    maxDelta = variableDomainSize * 1/4
+    factor = maxDelta / targetProba # for normalization and scaling
     delta = minDelta
+
+    adaptation = np.copy(row)
 
     startTime = time.time()
     lastProba = bestModel.predict_proba([adaptation])[0, 1]
@@ -91,7 +95,7 @@ if __name__ == '__main__':
         lastProba = bestModel.predict_proba([adaptation])[0, 1]
         # print(lastProba)
         # calculate the next delta
-        delta = max(minDelta, abs(targetProba - lastProba) * minDelta * 20)  # just heuristic... can be done better
+        delta = max(minDelta, (targetProba - lastProba) * factor)  # just heuristic... maybe it can be done better
     endTime = time.time()
     customTime = endTime - startTime
 
