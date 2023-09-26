@@ -115,10 +115,10 @@ if __name__ == '__main__':
         endTime = time.time()
         customTime = endTime - startTime
 
-        print("Adaptation:")
-        print(adaptation)
-        print("Model confidence:")
-        print(bestModel.predict_proba([adaptation])[0, 1])
+        print("Adaptation:\t" + str(adaptation))
+        print("Model confidence:\t" + str(bestModel.predict_proba([adaptation])[0, 1]))
+        score = (400 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
+        print("Score of the adaptation:\t" + str(score) + "/400")
         lime.printLime(lime.explain(explainer, bestModel, adaptation))
 
         print("\nCustom algorithm execution time: " + str(customTime) + " s")
@@ -137,9 +137,16 @@ if __name__ == '__main__':
             xFull = np.c_[res.X, np.tile(constantFeatures, (res.X.shape[0], 1))]
             print(bestModel.predict_proba(xFull)[:, 1])
 
+        if res.X is not None:
+            print("\nScores:")
+            scores = np.array([400 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3] for adaptation in res.X])
+            print(scores)
+            print("Best score: " + str(np.min(scores)))
+
         print("\nNSGA3 execution time: " + str(nsga3Time) + " s")
 
-        print("\nSpeed-up: " + str(nsga3Time / customTime) + "x")
+        if customTime is not 0:
+            print("\nSpeed-up: " + str(nsga3Time / customTime) + "x")
 
     """
     mod_dataset = X.to_numpy(copy=True)
