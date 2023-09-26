@@ -1,3 +1,4 @@
+import random
 import sys
 import math
 import os
@@ -52,7 +53,7 @@ if __name__ == '__main__':
     # create lime explainer
     explainer = lime.createLIMEExplainer(X_train)
 
-    rowIndex = 40
+    rowIndex = random.randrange(X.shape[0])
     row = X.iloc[rowIndex, :].to_numpy()
 
     print(str(row) + "\n")
@@ -75,6 +76,7 @@ if __name__ == '__main__':
     maxDelta = variableDomainSize * 1/4
     factor = maxDelta / targetProba # for normalization and scaling
     delta = minDelta
+    precision = variableDomainSize / 60 # just because pdps are lines with 60 points
 
     adaptation = np.copy(row)
 
@@ -85,13 +87,18 @@ if __name__ == '__main__':
         explanation = lime.explain(explainer, bestModel, adaptation)
         feature_ranked = lime.sortExplanation(explanation)
         feature = feature_ranked[0]
-        i = 1
-        while feature[0] > 3:
-            feature = feature_ranked[i]
-            i += 1
-        # modify the selected feature
+        deltaFromMax = 100
+        for f in feature_ranked:
+            feature = f
+            if f[0] < 3:
+                deltaFromMax = abs(adaptation[f[0]] - maxPoints[f[0]])
+                if deltaFromMax > precision: break
         featureIndex = feature[0]
+        if deltaFromMax < precision: break
+        # modify the selected feature
         adaptation[featureIndex] = adaptation[featureIndex] + np.sign(maxPoints[featureIndex] - adaptation[featureIndex]) * delta
+        if adaptation[featureIndex] < variableMin: adaptation[featureIndex] = variableMin
+        if adaptation[featureIndex] > variableMax: adaptation[featureIndex] = variableMax
         lastProba = bestModel.predict_proba([adaptation])[0, 1]
         # print(lastProba)
         # calculate the next delta
