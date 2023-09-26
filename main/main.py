@@ -50,15 +50,6 @@ if __name__ == '__main__':
         if not os.path.exists(path): os.makedirs(path)
         pdps[i] = pdp.partialDependencePlot(bestModel, X_train, [f], "both", path + '/' + f + '.png')
 
-    # create lime explainer
-    explainer = lime.createLIMEExplainer(X_train)
-
-    rowIndex = random.randrange(X.shape[0])
-    row = X.iloc[rowIndex, :].to_numpy()
-
-    print(str(row) + "\n")
-    lime.printLime(lime.explain(explainer, bestModel, row))
-
     # adaptations
 
     # pdp max points can be computed a priori, one for each controllable semantic variable
@@ -78,59 +69,77 @@ if __name__ == '__main__':
     delta = minDelta
     precision = variableDomainSize / 60 # just because pdps are lines with 60 points
 
-    adaptation = np.copy(row)
+    # create lime explainer
+    explainer = lime.createLIMEExplainer(X_train)
 
-    startTime = time.time()
-    lastProba = bestModel.predict_proba([adaptation])[0, 1]
-    while lastProba < targetProba:
-        # select the next feature to modify
-        explanation = lime.explain(explainer, bestModel, adaptation)
-        feature_ranked = lime.sortExplanation(explanation)
-        feature = feature_ranked[0]
-        deltaFromMax = 100
-        for f in feature_ranked:
-            feature = f
-            if f[0] < 3:
-                deltaFromMax = abs(adaptation[f[0]] - maxPoints[f[0]])
-                if deltaFromMax > precision: break
-        featureIndex = feature[0]
-        if deltaFromMax < precision: break
-        # modify the selected feature
-        adaptation[featureIndex] = adaptation[featureIndex] + np.sign(maxPoints[featureIndex] - adaptation[featureIndex]) * delta
-        if adaptation[featureIndex] < variableMin: adaptation[featureIndex] = variableMin
-        if adaptation[featureIndex] > variableMax: adaptation[featureIndex] = variableMax
-        lastProba = bestModel.predict_proba([adaptation])[0, 1]
-        # print(lastProba)
-        # calculate the next delta
-        delta = max(minDelta, (targetProba - lastProba) * factor)  # just heuristic... maybe it can be done better
-    endTime = time.time()
-    customTime = endTime - startTime
+    for k in range(1):
+        rowIndex = random.randrange(X.shape[0])
+        row = X.iloc[rowIndex, :].to_numpy()
 
-    print("Adaptation:")
-    print(adaptation)
-    print("Model confidence:")
-    print(bestModel.predict_proba([adaptation])[0, 1])
-    lime.printLime(lime.explain(explainer, bestModel, adaptation))
+        print(str(row) + "\n")
+        lime.printLime(lime.explain(explainer, bestModel, row))
 
-    print("\nCustom algorithm execution time: " + str(customTime) + " s")
+        adaptation = np.copy(row)
 
-    constantFeatures = X.iloc[rowIndex, 4:9]
-    startTime = time.time()
-    res = nsga3(bestModel, constantFeatures, featureNames)
-    endTime = time.time()
-    nsga3Time = endTime - startTime
+        bestSolution = np.copy(row)
+        for i, best in enumerate(maxPoints):
+            bestSolution[i] = best
 
-    print("\nPossible adaptations:")
-    print(res.X)
+        startTime = time.time()
+        # check if best solution solve the problem
+        if bestModel.predict_proba([bestSolution])[0, 1] < targetProba:
+            adaptation = bestSolution
+        else:
+            lastProba = bestModel.predict_proba([adaptation])[0, 1]
+            while lastProba < targetProba:
+                # select the next feature to modify
+                explanation = lime.explain(explainer, bestModel, adaptation)
+                feature_ranked = lime.sortExplanation(explanation)
+                feature = feature_ranked[0]
+                deltaFromMax = 100
+                for f in feature_ranked:
+                    feature = f
+                    if f[0] < 3:
+                        deltaFromMax = abs(adaptation[f[0]] - maxPoints[f[0]])
+                        if deltaFromMax > precision: break
+                featureIndex = feature[0]
+                if deltaFromMax < precision: break
+                # modify the selected feature
+                adaptation[featureIndex] = adaptation[featureIndex] + np.sign(maxPoints[featureIndex] - adaptation[featureIndex]) * delta
+                if adaptation[featureIndex] < variableMin: adaptation[featureIndex] = variableMin
+                if adaptation[featureIndex] > variableMax: adaptation[featureIndex] = variableMax
+                lastProba = bestModel.predict_proba([adaptation])[0, 1]
+                # print(lastProba)
+                # calculate the next delta
+                delta = max(minDelta, (targetProba - lastProba) * factor)  # just heuristic... maybe it can be done better
+        endTime = time.time()
+        customTime = endTime - startTime
 
-    if res.X is not None:
-        print("\nModel confidence:")
-        xFull = np.c_[res.X, np.tile(constantFeatures, (res.X.shape[0], 1))]
-        print(bestModel.predict_proba(xFull)[:, 1])
+        print("Adaptation:")
+        print(adaptation)
+        print("Model confidence:")
+        print(bestModel.predict_proba([adaptation])[0, 1])
+        lime.printLime(lime.explain(explainer, bestModel, adaptation))
 
-    print("\nNSGA3 execution time: " + str(nsga3Time) + " s")
+        print("\nCustom algorithm execution time: " + str(customTime) + " s")
 
-    print("\nSpeed-up: " + str(nsga3Time / customTime) + "x")
+        constantFeatures = X.iloc[rowIndex, 4:9]
+        startTime = time.time()
+        res = nsga3(bestModel, constantFeatures, featureNames)
+        endTime = time.time()
+        nsga3Time = endTime - startTime
+
+        print("\nPossible adaptations:")
+        print(res.X)
+
+        if res.X is not None:
+            print("\nModel confidence:")
+            xFull = np.c_[res.X, np.tile(constantFeatures, (res.X.shape[0], 1))]
+            print(bestModel.predict_proba(xFull)[:, 1])
+
+        print("\nNSGA3 execution time: " + str(nsga3Time) + " s")
+
+        print("\nSpeed-up: " + str(nsga3Time / customTime) + "x")
 
     """
     mod_dataset = X.to_numpy(copy=True)
