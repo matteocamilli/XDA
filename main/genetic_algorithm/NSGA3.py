@@ -10,11 +10,10 @@ from pymoo.visualization.scatter import Scatter
 
 
 class Adaptation(Problem):
-    def __init__(self, model, constantFeatures, featureNames):
+    def __init__(self, model, constantFeatures):
         super().__init__(n_var=4, n_obj=4, n_constr=1, xl=0.0, xu=100.0)
         self.model = model
         self.constantFeatures = constantFeatures
-        self.featureNames = featureNames
 
     def _evaluate(self, x, out, *args, **kwargs):
         xFull = np.c_[x, np.tile(self.constantFeatures, (x.shape[0], 1))]
@@ -27,7 +26,7 @@ class Adaptation(Problem):
         out["G"] = 0.8 - self.model.predict_proba(xFull)[:, 1]
 
 
-def nsga3(model, constantFeatures, featureNames):
+def nsga3(model, constantFeatures):
     # create the reference directions to be used for the optimization
     ref_dirs = get_reference_directions("das-dennis", 4, n_partitions=12)
 
@@ -42,7 +41,7 @@ def nsga3(model, constantFeatures, featureNames):
     )
 
     # execute the optimization
-    res = minimize(Adaptation(model, constantFeatures, featureNames),
+    res = minimize(Adaptation(model, constantFeatures),
                    algorithm,
                    seed=1,
                    termination=termination)

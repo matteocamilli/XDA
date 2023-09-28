@@ -3,7 +3,7 @@ import numpy as np
 from lime import lime_tabular
 
 
-def createLIMEExplainer(X_train):
+def createLimeExplainer(X_train):
     explainer = lime_tabular.LimeTabularExplainer(
         training_data=np.array(X_train),
         feature_names=X_train.columns,
@@ -22,14 +22,17 @@ def explain(explainer, model, data_row):
     return exp
 
 
-def printLime(explanation):
+def saveExplanation(explanation, path=None):
     explanation.as_pyplot_figure()
     plt.tight_layout()
+    if path is not None:
+        plt.savefig(path)
     plt.show()
+    plt.clf()
 
 
 def sortExplanation(explanation):
     local_exp = explanation.local_exp[1]
-    local_exp.sort(key=lambda k: k[1])
+    local_exp.sort(key=lambda k: k[1], reverse=True)
 
     return local_exp
