@@ -103,39 +103,57 @@ if __name__ == '__main__':
         lastAdaptation = np.copy(adaptation)
 
         startTime = time.time()
-        # check if the best possible solution doesn't solve the problem
         step = 0
+        excludedFeatures = []
         lastProba = model.predict_proba([lastAdaptation])[0, 1]
-        while lastProba >= targetProba:
-            adaptation = np.copy(lastAdaptation)
-            # select the next feature to modify
-            explanation = lime.explain(explainer, model, adaptation)
-            lime.saveExplanation(explanation, path + str(step))
-            step += 1
-            sortedFeatures = lime.sortExplanation(explanation)
-            featureIndex = -1
-            for f in sortedFeatures:
-                # select this feature if it can be improved, otherwise go next
-                index = f[0]
-                if (index < 3 and
-                    (featureToMinimize[index] == -1 and adaptation[index] > variableMin or
-                     featureToMinimize[index] == 1 and adaptation[index] < variableMax)):
-                    featureIndex = index
+        # check if the best possible solution doesn't solve the problem
+        if lastProba >= targetProba:
+            while lastProba >= targetProba or len(excludedFeatures) < len(controllableFeaturesNames):
+                # select the next feature to modify
+                explanation = lime.explain(explainer, model, adaptation)
+                sortedFeatures = lime.sortExplanation(explanation)
+
+                """
+                print("sorted features: " + str(sortedFeatures))
+                temp = explanation.local_exp[1].copy()
+                temp.sort(key=lambda k: k[0])
+                print("explanation: " + str(temp[0:4]))
+                """
+
+                featureIndex = -1
+                for f in sortedFeatures:
+                    # select this feature if it can be improved, otherwise go next
+                    index = f[0]
+                    if (index < len(controllableFeaturesNames) and index not in excludedFeatures and
+                        ((featureToMinimize[index] == -1 and adaptation[index] > variableMin) or
+                         (featureToMinimize[index] == 1 and adaptation[index] < variableMax))):
+                        featureIndex = index
+                        break
+                # stop if no feature can be improved
+                if featureIndex == -1:
                     break
-            # stop if no feature can be improved
-            if featureIndex == -1:
-                break
-            # modify the selected feature
-            slope = abs(pdp.getSlope(pdps[featureIndex], lastAdaptation[featureIndex]))
-            print("slope: " + str(slope))
-            lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * delta / (slope ** (1/4))
-            if lastAdaptation[featureIndex] < variableMin:
-                lastAdaptation[featureIndex] = variableMin
-            elif lastAdaptation[featureIndex] > variableMax:
-                lastAdaptation[featureIndex] = variableMax
-            print(lastAdaptation[0:4])
-            lastProba = model.predict_proba([lastAdaptation])[0, 1]
-            print("proba: " + str(lastProba) + "\n")
+                # print(featureIndex)
+                # modify the selected feature
+                slope = abs(pdp.getSlope(pdps[featureIndex], lastAdaptation[featureIndex]))
+                # print("slope: " + str(slope))
+                lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * delta / (slope ** (1/4))
+
+                if lastAdaptation[featureIndex] < variableMin:
+                    lastAdaptation[featureIndex] = variableMin
+                elif lastAdaptation[featureIndex] > variableMax:
+                    lastAdaptation[featureIndex] = variableMax
+
+                # print(lastAdaptation[0:len(controllableFeaturesNames)])
+
+                lastProba = model.predict_proba([lastAdaptation])[0, 1]
+                # print("proba: " + str(lastProba) + "\n")
+
+                if lastProba < targetProba:
+                    excludedFeatures.append(featureIndex)
+                else:
+                    adaptation = np.copy(lastAdaptation)
+
+                step += 1
         endTime = time.time()
         customTime = endTime - startTime
 
