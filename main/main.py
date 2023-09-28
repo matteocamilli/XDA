@@ -13,7 +13,6 @@ from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 from model.ModelConstructor import constructModel
 from genetic_algorithm.NSGA3 import nsga3
-from custom_algorithm import skyline_finder
 
 
 class Req:
@@ -80,8 +79,8 @@ if __name__ == '__main__':
 
     delta = 1
 
-    for k in range(1):
-        rowIndex = 40  # random.randrange(X.shape[0])
+    for k in range(5):
+        rowIndex = random.randrange(X.shape[0])     #FIXME this random sucks, it return same value during multiple iterations
         row = X.iloc[rowIndex, :].to_numpy()
 
         model = reqs[1].model
@@ -136,7 +135,7 @@ if __name__ == '__main__':
                 # modify the selected feature
                 slope = abs(pdp.getSlope(pdps[featureIndex], lastAdaptation[featureIndex]))
                 # print("slope: " + str(slope))
-                lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * delta / (slope ** (1/4))
+                lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * delta / (slope ** (1/5))
 
                 if lastAdaptation[featureIndex] < variableMin:
                     lastAdaptation[featureIndex] = variableMin
@@ -172,6 +171,7 @@ if __name__ == '__main__':
         endTime = time.time()
         nsga3Time = endTime - startTime
 
+        """
         print("\nPossible adaptations:")
         print(res.X)
 
@@ -182,9 +182,26 @@ if __name__ == '__main__':
 
         if res.X is not None:
             print("\nScores:")
-            scores = np.array([400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3]) for adaptation in res.X])
             print(scores)
             print("Best score: " + str(np.max(scores)))
+
+        print("\nNSGA3 execution time: " + str(nsga3Time) + " s")
+
+        if customTime != 0:
+            print("\nSpeed-up: " + str(nsga3Time / customTime) + "x")
+        """
+
+        if res.X is not None:
+            scores = np.array([400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3]) for adaptation in res.X])
+            bestScore = np.max(scores)
+            bestAdaptationIndex = np.where(scores == bestScore)
+
+            print("\nBest adaptation:")
+            print(res.X[bestAdaptationIndex])
+
+            print("\nModel confidence: " + str(model.predict_proba([np.append(res.X[bestAdaptationIndex], constantFeatures)])[:, 1]))
+
+            print("Best score: " + str(bestScore))
 
         print("\nNSGA3 execution time: " + str(nsga3Time) + " s")
 
