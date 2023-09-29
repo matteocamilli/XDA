@@ -4,6 +4,7 @@ import math
 import os
 import time
 import requests
+from colorama import Fore, Style
 
 import pandas as pd
 import numpy as np
@@ -21,8 +22,8 @@ class Req:
 
 
 if __name__ == '__main__':
-
     os.chdir(sys.path[0])
+
     ds = pd.read_csv('../datasets/dataset100.csv')
     featureNames = ["cruise speed",
                     "image resolution",
@@ -64,12 +65,17 @@ if __name__ == '__main__':
         # create lime explainer
         req.limeExplainer = lime.createLimeExplainer(X_train)
 
+    meanSpeedup = 0
+    meanScoreDiff = 0
+
     # adaptations
 
-    # pdp max points can be computed a priori
-    maxPoints = []
-    for i in range(4):
-        maxPoints.append(pdp.getMaxPoint(reqs[0].pdps[i]))
+    # pdp max points of mean line can be computed a priori
+    meanLineMaxPoints = {}
+    for req in reqs:
+        meanLineMaxPoints[req.name] = []
+        for i in range(4):
+            meanLineMaxPoints[req.name].append(pdp.getMaxPointOfMeanLine(req.pdps[i]))
 
     targetProba = 0.8
 
@@ -79,13 +85,20 @@ if __name__ == '__main__':
 
     delta = 1
 
-    for k in range(5):
-        rowIndex = random.randrange(X.shape[0])     #FIXME this random sucks, it return same value during multiple iterations
+    for k in range(1, 21):
+        print("Test " + str(k) + ":")
+
+        random.seed()
+        req = reqs[random.randrange(0, len(reqs))]
+        print("Req: " + str(req.name))
+
+        rowIndex = random.randrange(0, X.shape[0])
+        print("Row " + str(rowIndex))
         row = X.iloc[rowIndex, :].to_numpy()
 
-        model = reqs[1].model
-        explainer = reqs[1].limeExplainer
-        pdps = reqs[1].pdps
+        model = req.model
+        explainer = req.limeExplainer
+        pdps = req.pdps
 
         path = "../plots/adaptation/"
         if not os.path.exists(path):
@@ -94,9 +107,16 @@ if __name__ == '__main__':
         print(str(row) + "\n")
         lime.saveExplanation(lime.explain(explainer, model, row), path + "starting")
 
+        """
+        # pdp max points of closest line must be computed at each adaptation if needed
+        closestLineMaxPoints = []
+        for i in range(4):
+            closestLineMaxPoints.append(pdp.getMaxPointOfClosestLine(req.pdps[i], row[i], model.predict_proba([row])[0, 1]))
+        """
+
         # max probability solution
         adaptation = np.copy(row)
-        for i, best in enumerate(maxPoints):
+        for i, best in enumerate(meanLineMaxPoints[req.name]):
             adaptation[i] = best
 
         lastAdaptation = np.copy(adaptation)
@@ -158,8 +178,8 @@ if __name__ == '__main__':
 
         print("Adaptation:\t" + str(adaptation))
         print("Model confidence:\t" + str(model.predict_proba([adaptation])[0, 1]))
-        score = 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
-        print("Score of the adaptation:\t" + str(score) + "/400")
+        customAlgoScore = 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
+        print("Score of the adaptation:\t" + str(customAlgoScore) + "/400")
         print("Total steps:\t" + str(step))
         lime.saveExplanation(lime.explain(explainer, model, adaptation), path + "final")
 
@@ -193,21 +213,28 @@ if __name__ == '__main__':
 
         if res.X is not None:
             scores = np.array([400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3]) for adaptation in res.X])
-            bestScore = np.max(scores)
-            bestAdaptationIndex = np.where(scores == bestScore)
+            nsga3Score = np.max(scores)
+            bestAdaptationIndex = np.where(scores == nsga3Score)
 
-            print("\nBest adaptation:")
+            print("\nBest NSGA3 adaptation:")
             print(res.X[bestAdaptationIndex])
 
             print("\nModel confidence: " + str(model.predict_proba([np.append(res.X[bestAdaptationIndex], constantFeatures)])[:, 1]))
 
-            print("Best score: " + str(bestScore))
+            print("Score: " + str(nsga3Score))
 
-        print("\nNSGA3 execution time: " + str(nsga3Time) + " s")
+        print("\nNSGA3 execution time: " + str(nsga3Time) + " s\n")
 
-        if customTime != 0:
-            print("\nSpeed-up: " + str(nsga3Time / customTime) + "x")
+        if step != 0:
+            speedup = nsga3Time / customTime
+            scoreDiff = customAlgoScore - nsga3Score
+            print(Fore.GREEN + "Speed-up: " + str(speedup) + "x")
+            print("Score diff: " + str(scoreDiff) + Style.RESET_ALL)
 
+            meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
+            meanScoreDiff = (meanScoreDiff * (k - 1) + scoreDiff) / k
+            print(Fore.YELLOW + "Mean speed-up: " + str(meanSpeedup) + "x")
+            print("Mean score diff: " + str(meanScoreDiff) + "\n" + Style.RESET_ALL)
     """
     mod_dataset = X.to_numpy(copy=True)
 

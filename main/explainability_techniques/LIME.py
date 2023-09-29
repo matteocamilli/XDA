@@ -27,7 +27,7 @@ def saveExplanation(explanation, path=None):
     plt.tight_layout()
     if path is not None:
         plt.savefig(path)
-    plt.show()
+    # plt.show()
     plt.clf()
 
 

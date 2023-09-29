@@ -99,7 +99,7 @@ def example():
 
             clf = make_pipeline(StandardScaler(), clf)
             clf.fit(X_train, y_train)
-            score = clf.score(X_test, y_test)
+            score = clf.customAlgoScore(X_test, y_test)
             DecisionBoundaryDisplay.from_estimator(
                 clf, X, cmap=cm, alpha=0.8, ax=ax, eps=0.5
             )
