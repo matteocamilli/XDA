@@ -107,8 +107,10 @@ if __name__ == '__main__':
         print(str(row) + "\n")
         lime.saveExplanation(lime.explain(explainer, model, row), path + "starting")
 
-        """
+        startTime = time.time()
+
         # pdp max points of closest line must be computed at each adaptation if needed
+        """
         closestLineMaxPoints = []
         for i in range(4):
             closestLineMaxPoints.append(pdp.getMaxPointOfClosestLine(req.pdps[i], row[i], model.predict_proba([row])[0, 1]))
@@ -121,7 +123,6 @@ if __name__ == '__main__':
 
         lastAdaptation = np.copy(adaptation)
 
-        startTime = time.time()
         step = 0
         excludedFeatures = []
         lastProba = model.predict_proba([lastAdaptation])[0, 1]
