@@ -91,7 +91,7 @@ if __name__ == '__main__':
     variableMax = 100
     variableDomainSize = variableMax - variableMin
 
-    deltaMax = variableDomainSize/10
+    delta = variableDomainSize/100
 
     for k in range(1, 21):
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)
@@ -161,9 +161,8 @@ if __name__ == '__main__':
                 # print(featureIndex)
                 # modify the selected feature
                 slope = abs(pdp.getSlopeOfClosestLine(pdps[featureIndex], lastAdaptation[featureIndex], lastProba))
-                delta = (lastProba - targetProba) * 1.1 / 2
                 # print("slope: " + str(slope))
-                lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * min(delta / slope, deltaMax)
+                lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * delta / slope
 
                 if lastAdaptation[featureIndex] < variableMin:
                     lastAdaptation[featureIndex] = variableMin
