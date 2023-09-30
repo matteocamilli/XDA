@@ -31,8 +31,8 @@ def saveExplanation(explanation, path=None):
     plt.clf()
 
 
-def sortExplanation(explanation):
+def sortExplanation(explanation, reverse):
     local_exp = explanation.local_exp[1]
-    local_exp.sort(key=lambda k: k[1], reverse=True)
+    local_exp.sort(key=lambda k: k[1], reverse=reverse)
 
     return local_exp

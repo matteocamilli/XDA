@@ -4,6 +4,7 @@ import math
 import os
 import time
 import requests
+import warnings
 from colorama import Fore, Style
 
 import pandas as pd
@@ -23,6 +24,8 @@ class Req:
 
 if __name__ == '__main__':
     os.chdir(sys.path[0])
+    # suppress all warnings
+    warnings.filterwarnings("ignore")
 
     ds = pd.read_csv('../datasets/dataset100.csv')
     featureNames = ["cruise speed",
@@ -52,7 +55,11 @@ if __name__ == '__main__':
         y_test = np.ravel(y_test)
         y_train = np.ravel(y_train)
 
+        print(Fore.RED + "Requirement: " + req.name + "\n" + Style.RESET_ALL)
+
         req.model = constructModel(X_train.values, X_test.values, y_train, y_test)
+
+        print("=======================================================================================================")
 
         # make pdp graphs
         req.pdps = {}
@@ -69,6 +76,7 @@ if __name__ == '__main__':
     meanScoreDiff = 0
 
     # adaptations
+    results = []
 
     # pdp max points of mean line can be computed a priori
     meanLineMaxPoints = {}
@@ -85,8 +93,8 @@ if __name__ == '__main__':
 
     delta = 1
 
-    for k in range(1, 21):
-        print("Test " + str(k) + ":")
+    for k in range(1, 4):
+        print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)
 
         random.seed()
         req = reqs[random.randrange(0, len(reqs))]
@@ -104,7 +112,7 @@ if __name__ == '__main__':
         if not os.path.exists(path):
             os.makedirs(path)
 
-        print(str(row) + "\n")
+        print(str(row))
         lime.saveExplanation(lime.explain(explainer, model, row), path + "starting")
 
         startTime = time.time()
@@ -131,7 +139,7 @@ if __name__ == '__main__':
             while lastProba >= targetProba or len(excludedFeatures) < len(controllableFeaturesNames):
                 # select the next feature to modify
                 explanation = lime.explain(explainer, model, adaptation)
-                sortedFeatures = lime.sortExplanation(explanation)
+                sortedFeatures = lime.sortExplanation(explanation, reverse=True)
 
                 """
                 print("sorted features: " + str(sortedFeatures))
@@ -177,14 +185,19 @@ if __name__ == '__main__':
         endTime = time.time()
         customTime = endTime - startTime
 
+        print("-------------------------------------------------------------------------------------------------------")
+
         print("Adaptation:\t" + str(adaptation))
-        print("Model confidence:\t" + str(model.predict_proba([adaptation])[0, 1]))
+        custom_proba = model.predict_proba([adaptation])[0, 1]
+        print("Model confidence:\t" + str(custom_proba))
         customAlgoScore = 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
         print("Score of the adaptation:\t" + str(customAlgoScore) + "/400")
         print("Total steps:\t" + str(step))
         lime.saveExplanation(lime.explain(explainer, model, adaptation), path + "final")
 
         print("\nCustom algorithm execution time: " + str(customTime) + " s")
+
+        print("-------------------------------------------------------------------------------------------------------")
 
         constantFeatures = X.iloc[rowIndex, 4:9]
         startTime = time.time()
@@ -216,26 +229,59 @@ if __name__ == '__main__':
             scores = np.array([400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3]) for adaptation in res.X])
             nsga3Score = np.max(scores)
             bestAdaptationIndex = np.where(scores == nsga3Score)
+            nsga3Adaptation = res.X[bestAdaptationIndex][0]
+            nsga3_proba = model.predict_proba([np.append(res.X[bestAdaptationIndex], constantFeatures)])[:, 1][0]
 
-            print("\nBest NSGA3 adaptation:")
-            print(res.X[bestAdaptationIndex])
+            print("Best NSGA3 adaptation:")
+            print(nsga3Adaptation)
 
-            print("\nModel confidence: " + str(model.predict_proba([np.append(res.X[bestAdaptationIndex], constantFeatures)])[:, 1]))
+            print("Model confidence: " + str(nsga3_proba))
 
             print("Score: " + str(nsga3Score))
+        else:
+            print("No adaptation found")
+            nsga3Adaptation = None
+            nsga3_proba = None
+            nsga3Score = None
 
-        print("\nNSGA3 execution time: " + str(nsga3Time) + " s\n")
+        print("\nNSGA3 execution time: " + str(nsga3Time) + " s")
+
+
 
         if step != 0:
+            print("-------------------------------------------------------------------------------------------------------")
             speedup = nsga3Time / customTime
             scoreDiff = customAlgoScore - nsga3Score
-            print(Fore.GREEN + "Speed-up: " + str(speedup) + "x")
-            print("Score diff: " + str(scoreDiff) + Style.RESET_ALL)
+            scoreDiffPercent = "{:.2%}".format(scoreDiff/nsga3Score)
+            print(Fore.GREEN + "\nSpeed-up: " + str(speedup) + "x")
+            print("Score diff: " + str(scoreDiff))
+            print("Score diff [% of loss]: " + str(scoreDiffPercent) + Style.RESET_ALL)
 
             meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
             meanScoreDiff = (meanScoreDiff * (k - 1) + scoreDiff) / k
             print(Fore.YELLOW + "Mean speed-up: " + str(meanSpeedup) + "x")
             print("Mean score diff: " + str(meanScoreDiff) + "\n" + Style.RESET_ALL)
+        else:
+            scoreDiff = None
+            scoreDiffPercent = None
+            speedup = None
+
+        print("=======================================================================================================")
+
+        results.append([nsga3Adaptation, adaptation,
+                        nsga3_proba, custom_proba,
+                        nsga3Score, customAlgoScore, scoreDiff, scoreDiffPercent,
+                        nsga3Time, customTime, speedup])
+
+    results = pd.DataFrame(results, columns=["nsga3_adaptation", "custom_adaptation",
+                                             "nsga3_confidence", "custom_confidence",
+                                             "nsga3_score", "custom_score", "score_diff", "score_diff[%]"
+                                             "nsga3_time", "custom_time", "speed-up"])
+    path = "../results"
+    if not os.path.exists(path):
+        os.makedirs(path)
+    results.to_csv(path + "/results.csv")
+
     """
     mod_dataset = X.to_numpy(copy=True)
 
