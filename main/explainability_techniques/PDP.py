@@ -12,9 +12,11 @@ def partialDependencePlot(model, X_train, features, kind, path=None):
     return pdp
 
 def getMaxPointOfLine(pdp, lineIndex):
-    data = pdp.lines_[0, 0, lineIndex].get_data(True)
-    xVals = data[0]
-    yVals = data[1]
+    if lineIndex >= 0:
+        yVals = pdp.pd_results[0]["individual"][0][lineIndex, :]
+    else:
+        yVals = pdp.pd_results[0]["average"][lineIndex, :]
+    xVals = pdp.pd_results[0]["values"][0]
     max_point = 0
     for i in range(60):
         if yVals[i] > yVals[max_point]:
@@ -23,18 +25,16 @@ def getMaxPointOfLine(pdp, lineIndex):
     return xVals[max_point]
 
 def getMaxPointOfMeanLine(pdp):
-    return getMaxPointOfLine(pdp, 60)
+    return getMaxPointOfLine(pdp, -1)
 
 def getMaxPointOfClosestLine(pdp, x, y):
-    line = pdp.lines_[0, 0, 0].get_data(True)
-    xVals = line[0]
+    return getMaxPointOfLine(pdp, getClosestLine(pdp, x, y))
+
+def getClosestLine(pdp, x, y):
+    xVals = pdp.pd_results[0]["values"][0]
     closestXIndex = binarySearchClosestIndex(x, xVals)  # same for each line
 
-    linesY = []
-    for i in range(60):
-        line = pdp.lines_[0, 0, i].get_data(True)
-        yVals = line[1]
-        linesY.append(yVals[closestXIndex])
+    linesY = pdp.pd_results[0]["individual"][0][:, closestXIndex]
 
     distance = -1
     lineIndex = -1
@@ -43,7 +43,7 @@ def getMaxPointOfClosestLine(pdp, x, y):
         if newDist < distance or distance == -1:
             distance = newDist
             lineIndex = i
-    return getMaxPointOfLine(pdp, lineIndex)
+    return lineIndex
 
 def binarySearchClosest(elem, list):
     if len(list) == 1:
@@ -90,16 +90,18 @@ def binarySearchClosestIndexHelper(elem, list, index):
         else:
             return binarySearchClosestIndexHelper(elem, list[len(list)//2:], index)
 
-def getSlope(pdp, x):
-    data = pdp.lines_[0, 0, 60].get_data(True)
-    probs = data[1]
-    var = data[0]
-    index = len(var) - 1
-    for i in range(len(var)):
-        if var[i] > x:
+def getSlope(pdp, x, lineIndex):
+    xVals = pdp.pd_results[0]["values"][0]
+    linesY = pdp.pd_results[0]["individual"][0][lineIndex, :]
+    index = len(xVals) - 1
+    for i in range(len(xVals)):
+        if xVals[i] > x:
             index = i
             break
     if index == 0:
         index = 1
-    slope = (probs[i] - probs[index - 1]) / (var[index] - var[index - 1])
+    slope = (linesY[i] - linesY[index - 1]) / (xVals[index] - xVals[index - 1])
     return slope
+
+def getSlopeOfClosestLine(pdp, x, y):
+    return getSlope(pdp, x, getClosestLine(pdp, x, y))

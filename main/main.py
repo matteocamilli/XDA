@@ -91,9 +91,9 @@ if __name__ == '__main__':
     variableMax = 100
     variableDomainSize = variableMax - variableMin
 
-    delta = 1
+    deltaMax = variableDomainSize/10
 
-    for k in range(1, 4):
+    for k in range(1, 21):
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)
 
         random.seed()
@@ -118,15 +118,13 @@ if __name__ == '__main__':
         startTime = time.time()
 
         # pdp max points of closest line must be computed at each adaptation if needed
-        """
         closestLineMaxPoints = []
         for i in range(4):
             closestLineMaxPoints.append(pdp.getMaxPointOfClosestLine(req.pdps[i], row[i], model.predict_proba([row])[0, 1]))
-        """
 
         # max probability solution
         adaptation = np.copy(row)
-        for i, best in enumerate(meanLineMaxPoints[req.name]):
+        for i, best in enumerate(closestLineMaxPoints):
             adaptation[i] = best
 
         lastAdaptation = np.copy(adaptation)
@@ -162,9 +160,10 @@ if __name__ == '__main__':
                     break
                 # print(featureIndex)
                 # modify the selected feature
-                slope = abs(pdp.getSlope(pdps[featureIndex], lastAdaptation[featureIndex]))
+                slope = abs(pdp.getSlopeOfClosestLine(pdps[featureIndex], lastAdaptation[featureIndex], lastProba))
+                delta = (lastProba - targetProba) * 1.1 / 2
                 # print("slope: " + str(slope))
-                lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * delta / (slope ** (1/5))
+                lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * min(delta / slope, deltaMax)
 
                 if lastAdaptation[featureIndex] < variableMin:
                     lastAdaptation[featureIndex] = variableMin
@@ -182,6 +181,8 @@ if __name__ == '__main__':
                     adaptation = np.copy(lastAdaptation)
 
                 step += 1
+        else:
+            print("Adaptation not found, using best adaptation")
         endTime = time.time()
         customTime = endTime - startTime
 
@@ -275,7 +276,7 @@ if __name__ == '__main__':
 
     results = pd.DataFrame(results, columns=["nsga3_adaptation", "custom_adaptation",
                                              "nsga3_confidence", "custom_confidence",
-                                             "nsga3_score", "custom_score", "score_diff", "score_diff[%]"
+                                             "nsga3_score", "custom_score", "score_diff", "score_diff[%]",
                                              "nsga3_time", "custom_time", "speed-up"])
     path = "../results"
     if not os.path.exists(path):
