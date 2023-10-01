@@ -74,6 +74,7 @@ if __name__ == '__main__':
 
     meanSpeedup = 0
     meanScoreDiff = 0
+    meanScoreDiffPerc = 0
 
     # adaptations
     results = []
@@ -91,9 +92,10 @@ if __name__ == '__main__':
     variableMax = 100
     variableDomainSize = variableMax - variableMin
 
-    delta = variableDomainSize/100
+    yDeltaMin = 1/100
+    deltaMax = variableDomainSize/20
 
-    for k in range(1, 21):
+    for k in range(1, 11):
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)
 
         random.seed()
@@ -133,8 +135,8 @@ if __name__ == '__main__':
         excludedFeatures = []
         lastProba = model.predict_proba([lastAdaptation])[0, 1]
         # check if the best possible solution doesn't solve the problem
-        if lastProba >= targetProba:
-            while lastProba >= targetProba or len(excludedFeatures) < len(controllableFeaturesNames):
+        if lastProba > targetProba:
+            while lastProba > targetProba or len(excludedFeatures) < len(controllableFeaturesNames):
                 # select the next feature to modify
                 explanation = lime.explain(explainer, model, adaptation)
                 sortedFeatures = lime.sortExplanation(explanation, reverse=True)
@@ -162,7 +164,11 @@ if __name__ == '__main__':
                 # modify the selected feature
                 slope = abs(pdp.getSlopeOfClosestLine(pdps[featureIndex], lastAdaptation[featureIndex], lastProba))
                 # print("slope: " + str(slope))
-                lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * delta / (slope ** (1/5))
+                yDelta = max((lastProba - targetProba) * 1.1 / 4, yDeltaMin)
+                # print("yDelta :" + str(yDelta))
+                delta = min(yDelta / slope, deltaMax)
+                # print("delta: " + str(delta) + "\n")
+                lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * delta
 
                 if lastAdaptation[featureIndex] < variableMin:
                     lastAdaptation[featureIndex] = variableMin
@@ -176,6 +182,7 @@ if __name__ == '__main__':
 
                 if lastProba < targetProba:
                     excludedFeatures.append(featureIndex)
+                    lastAdaptation = np.copy(adaptation)
                 else:
                     adaptation = np.copy(lastAdaptation)
 
@@ -248,29 +255,32 @@ if __name__ == '__main__':
 
 
 
-        if step != 0:
+        if res.X is not None:
             print("-------------------------------------------------------------------------------------------------------")
             speedup = nsga3Time / customTime
             scoreDiff = customAlgoScore - nsga3Score
-            scoreDiffPercent = "{:.2%}".format(scoreDiff/nsga3Score)
+            scoreDiffPercent = scoreDiff/nsga3Score
+            scoreDiffPercentString = "{:.2%}".format(scoreDiffPercent)
             print(Fore.GREEN + "\nSpeed-up: " + str(speedup) + "x")
             print("Score diff: " + str(scoreDiff))
-            print("Score diff [% of loss]: " + str(scoreDiffPercent) + Style.RESET_ALL)
+            print("Score diff [% of loss]: " + scoreDiffPercentString + Style.RESET_ALL)
 
             meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
             meanScoreDiff = (meanScoreDiff * (k - 1) + scoreDiff) / k
+            meanScoreDiffPerc = (meanScoreDiffPerc * (k - 1) + scoreDiffPercent) / k
             print(Fore.YELLOW + "Mean speed-up: " + str(meanSpeedup) + "x")
-            print("Mean score diff: " + str(meanScoreDiff) + "\n" + Style.RESET_ALL)
+            print("Mean score diff: " + str(meanScoreDiff))
+            print("Mean score diff [% of loss]: " + str("{:.2%}".format(meanScoreDiffPerc)) + "\n" + Style.RESET_ALL)
         else:
             scoreDiff = None
-            scoreDiffPercent = None
+            scoreDiffPercentString = None
             speedup = None
 
         print("=======================================================================================================")
 
         results.append([nsga3Adaptation, adaptation,
                         nsga3_proba, custom_proba,
-                        nsga3Score, customAlgoScore, scoreDiff, scoreDiffPercent,
+                        nsga3Score, customAlgoScore, scoreDiff, scoreDiffPercentString,
                         nsga3Time, customTime, speedup])
 
     results = pd.DataFrame(results, columns=["nsga3_adaptation", "custom_adaptation",
