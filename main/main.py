@@ -162,7 +162,7 @@ if __name__ == '__main__':
                 # modify the selected feature
                 slope = abs(pdp.getSlopeOfClosestLine(pdps[featureIndex], lastAdaptation[featureIndex], lastProba))
                 # print("slope: " + str(slope))
-                lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * delta / slope
+                lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * delta / (slope ** (1/5))
 
                 if lastAdaptation[featureIndex] < variableMin:
                     lastAdaptation[featureIndex] = variableMin
