@@ -75,9 +75,13 @@ if __name__ == '__main__':
     meanSpeedup = 0
     meanScoreDiff = 0
     meanScoreDiffPerc = 0
+    meanScoreImprovement = 0
+    meanScoreImprovementPerc = 0
+    meanTimeAddition = 0
 
     # adaptations
     results = []
+    deeperSearch = True
 
     # pdp max points of mean line can be computed a priori
     meanLineMaxPoints = {}
@@ -95,14 +99,14 @@ if __name__ == '__main__':
     yDeltaMin = 1/100
     deltaMax = variableDomainSize/20
 
-    for k in range(1, X.shape[0] + 1):
+    for k in range(1, 2):    # X.shape[0] + 1
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)
 
         random.seed()
         req = reqs[1]        # random.randrange(0, len(reqs))
         print("Req: " + str(req.name))
 
-        rowIndex = k - 1     # random.randrange(0, X.shape[0])
+        rowIndex = 42     # k - 1     # random.randrange(0, X.shape[0])
         print("Row " + str(rowIndex))
         row = X.iloc[rowIndex, :].to_numpy()
 
@@ -193,6 +197,7 @@ if __name__ == '__main__':
                     # print("accepted\n")
 
                 step += 1
+
         else:
             print("Adaptation not found, using best adaptation")
         endTime = time.time()
@@ -200,16 +205,115 @@ if __name__ == '__main__':
 
         print("-------------------------------------------------------------------------------------------------------")
 
+        customAdaptation = np.copy(adaptation)
         print("Adaptation:")
-        print(adaptation[0:4])
-        custom_proba = model.predict_proba([adaptation])[0, 1]
+        print(customAdaptation[0:4])
+        custom_proba = model.predict_proba([customAdaptation])[0, 1]
         print("Model confidence:\t" + str(custom_proba))
-        customAlgoScore = 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
+        customAlgoScore = 400 - (100 - customAdaptation[0] + customAdaptation[1] + customAdaptation[2] + customAdaptation[3])
         print("Score of the adaptation:\t" + str(customAlgoScore) + "/400")
         print("Total steps:\t" + str(step))
-        lime.saveExplanation(lime.explain(explainer, model, adaptation), path + "final")
+        lime.saveExplanation(lime.explain(explainer, model, customAdaptation), path + "final")
 
         print("\nCustom algorithm execution time: " + str(customTime) + " s")
+
+        # deeper optimization algorithm
+        startTime = time.time()
+
+        step = 0
+        deltaScore = 100
+        increment = 1
+        increaseDecrement = increment/10
+        treshold = increment/10
+
+        lastProba = model.predict_proba([adaptation])[0, 1]
+        if deeperSearch and custom_proba > targetProba:
+            while deltaScore > treshold and lastProba > targetProba:
+                slopes = [pdp.getSlopeOfClosestLine(pdps[i], adaptation[i], lastProba) for i in range(len(controllableFeaturesNames))]
+                # print("slopes: " + str(slopes))
+                increments = [-s * d for s,d in zip(slopes,optimizationDirection)]
+                print("increments: " + str(increments))
+                featureToOptimize = increments.index(min(increments))
+                print("featureToOptimize: " + str(featureToOptimize))
+                featureToCompromise = increments.index(max(increments))
+                print("featureToCompromise: " + str(featureToCompromise))
+
+                scoreBefore = 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
+
+                lastAdaptation[featureToOptimize] += increment * optimizationDirection[featureToOptimize]
+
+                if lastAdaptation[featureToOptimize] < variableMin:
+                    lastAdaptation[featureToOptimize] = variableMin
+                elif lastAdaptation[featureToOptimize] > variableMax:
+                    lastAdaptation[featureToOptimize] = variableMax
+
+                decrement = abs(increments[featureToOptimize]/increments[featureToCompromise])
+                lastProba = model.predict_proba([lastAdaptation])[0, 1]
+                while lastProba < targetProba and abs(decrement) < increment:
+                    lastAdaptation[featureToCompromise] = adaptation[featureToCompromise]
+                    lastAdaptation[featureToCompromise] -= decrement * optimizationDirection[featureToCompromise]
+
+                    if lastAdaptation[featureToCompromise] < variableMin:
+                        lastAdaptation[featureToCompromise] = variableMin
+                    elif lastAdaptation[featureToCompromise] > variableMax:
+                        lastAdaptation[featureToCompromise] = variableMax
+
+                    lastProba = model.predict_proba([lastAdaptation])[0, 1]
+                    print("proba: " + str(lastProba))
+
+                    print("decrement: " + str(decrement))
+                    decrement += increaseDecrement
+
+                print(adaptation[0:4])
+                print(lastAdaptation[0:4])
+                print([l - a for a, l in zip(adaptation, lastAdaptation)][0:4])
+
+                scoreAfter = 400 - (100 - lastAdaptation[0] + lastAdaptation[1] + lastAdaptation[2] + lastAdaptation[3])
+                # print("Score: " + str(scoreAfter))
+                deltaScore = scoreAfter - scoreBefore
+                print("deltaScore: " + str(deltaScore))
+                # print("proba: " + str(lastProba) + "\n")
+
+                if lastProba < targetProba or deltaScore < 0:
+                    lastAdaptation = np.copy(adaptation)
+                    print("discarded\n")
+                else:
+                    adaptation = np.copy(lastAdaptation)
+                    print("accepted\n")
+                step += 1
+
+            endTime = time.time()
+            deeperAlgoTime = endTime - startTime
+
+        # if lastProba > targetProba:
+            print("-------------------------------------------------------------------------------------------------------")
+
+            deeperAdaptation = np.copy(adaptation)
+            print("Deeper Adaptation:")
+            print(deeperAdaptation[0:4])
+            deeper_proba = model.predict_proba([deeperAdaptation])[0, 1]
+            print("Model confidence:\t" + str(deeper_proba))
+            deeperAlgoScore = 400 - (100 - deeperAdaptation[0] + deeperAdaptation[1] + deeperAdaptation[2] + deeperAdaptation[3])
+            deeperScoreImprovement = deeperAlgoScore - customAlgoScore
+            deeperScoreImprovementPerc = "{:.2%}".format(deeperScoreImprovement / customAlgoScore)
+            meanScoreImprovement = (meanScoreImprovement * (k - 1) + deeperScoreImprovement / customAlgoScore) / k
+            meanScoreImprovementPerc = "{:.2%}".format(meanScoreImprovement)
+            print("Score improvement:\t" + str(deeperScoreImprovement))
+            print("Score improvement[%]:\t" + deeperScoreImprovementPerc)
+            print("Total steps:\t" + str(step))
+            lime.saveExplanation(lime.explain(explainer, model, deeperAdaptation), path + "final")
+
+            print("\nDeeper algorithm execution time: " + str(deeperAlgoTime) + " s")
+            print("\nDeeper algorithm time addition[%]: +" + "{:.2%}".format(deeperAlgoTime / customTime))
+
+        else:
+            deeperAlgoTime = 0
+            deeperAdaptation = None
+            deeper_proba = None
+            deeperAlgoScore = None
+            deeperScoreImprovement = 0
+            deeperScoreImprovementPerc = None
+
 
         print("-------------------------------------------------------------------------------------------------------")
 
@@ -265,8 +369,10 @@ if __name__ == '__main__':
         if res.X is not None:
             print("-------------------------------------------------------------------------------------------------------")
             if step > 0:
-                speedup = nsga3Time / customTime
-            scoreDiff = customAlgoScore - nsga3Score
+                speedup = nsga3Time / (customTime + deeperAlgoTime)
+            else:
+                speedup = None
+            scoreDiff = customAlgoScore + deeperScoreImprovement - nsga3Score
             scoreDiffPercent = scoreDiff/nsga3Score
             scoreDiffPercentString = "{:.2%}".format(scoreDiffPercent)
             print(Fore.GREEN + "\nSpeed-up: " + str(speedup) + "x")
@@ -278,6 +384,7 @@ if __name__ == '__main__':
             meanScoreDiff = (meanScoreDiff * (k - 1) + scoreDiff) / k
             meanScoreDiffPerc = (meanScoreDiffPerc * (k - 1) + scoreDiffPercent) / k
             print(Fore.YELLOW + "Mean speed-up: " + str(meanSpeedup) + "x")
+            print("Mean score improvement with deeperAlgo: " + str(meanScoreImprovementPerc))
             print("Mean score diff: " + str(meanScoreDiff))
             print("Mean score diff [% of loss]: " + str("{:.2%}".format(meanScoreDiffPerc)) + "\n" + Style.RESET_ALL)
         else:
@@ -287,19 +394,19 @@ if __name__ == '__main__':
 
         print("=======================================================================================================")
 
-        results.append([nsga3Adaptation, adaptation,
-                        nsga3_proba, custom_proba,
-                        nsga3Score, customAlgoScore, scoreDiff, scoreDiffPercentString,
-                        nsga3Time, customTime, speedup])
+        results.append([nsga3Adaptation, customAdaptation, deeperAdaptation,
+                        nsga3_proba, custom_proba, deeper_proba,
+                        nsga3Score, customAlgoScore, deeperAlgoScore, deeperScoreImprovementPerc, scoreDiff, scoreDiffPercentString,
+                        nsga3Time, customTime, deeperAlgoTime, speedup])
 
-    results = pd.DataFrame(results, columns=["nsga3_adaptation", "custom_adaptation",
-                                             "nsga3_confidence", "custom_confidence",
-                                             "nsga3_score", "custom_score", "score_diff", "score_diff[%]",
-                                             "nsga3_time", "custom_time", "speed-up"])
+    results = pd.DataFrame(results, columns=["nsga3_adaptation", "custom_adaptation", "deeper_adaptation",
+                                             "nsga3_confidence", "custom_confidence", "deeper_proba",
+                                             "nsga3_score", "custom_score", "deeper_score", "deeper_improvement[%]", "score_diff", "score_diff[%]",
+                                             "nsga3_time", "custom_time", "deeper_time", "speed-up"])
     path = "../results"
     if not os.path.exists(path):
         os.makedirs(path)
-    results.to_csv(path + "/results_req0.csv")
+    results.to_csv(path + "/results.csv")
 
     """
     mod_dataset = X.to_numpy(copy=True)
