@@ -41,7 +41,7 @@ if __name__ == '__main__':
     externalFeaturesNames = featureNames[4:9]
 
     # establishes if the controllable features must be minimized (-1) or maximized (1)
-    featureToMinimize = [-1, 1, 1, 1]
+    optimizationDirection = [1, -1, -1, -1]
 
     reqs = [Req("req_0"), Req("req_1"), Req("req_2"), Req("req_3")]
     for req in reqs:
@@ -95,14 +95,14 @@ if __name__ == '__main__':
     yDeltaMin = 1/100
     deltaMax = variableDomainSize/20
 
-    for k in range(1, 11):
+    for k in range(1, X.shape[0] + 1):
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)
 
         random.seed()
-        req = reqs[random.randrange(0, len(reqs))]
+        req = reqs[1]        # random.randrange(0, len(reqs))
         print("Req: " + str(req.name))
 
-        rowIndex = random.randrange(0, X.shape[0])
+        rowIndex = k - 1     # random.randrange(0, X.shape[0])
         print("Row " + str(rowIndex))
         row = X.iloc[rowIndex, :].to_numpy()
 
@@ -153,8 +153,8 @@ if __name__ == '__main__':
                     # select this feature if it can be improved, otherwise go next
                     index = f[0]
                     if (index < len(controllableFeaturesNames) and index not in excludedFeatures and
-                        ((featureToMinimize[index] == -1 and adaptation[index] > variableMin) or
-                         (featureToMinimize[index] == 1 and adaptation[index] < variableMax))):
+                        ((optimizationDirection[index] == -1 and adaptation[index] > variableMin) or
+                         (optimizationDirection[index] == 1 and adaptation[index] < variableMax))):
                         featureIndex = index
                         break
                 # stop if no feature can be improved
@@ -167,15 +167,19 @@ if __name__ == '__main__':
                 yDelta = max((lastProba - targetProba) * 1.1 / 4, yDeltaMin)
                 # print("yDelta :" + str(yDelta))
                 delta = min(yDelta / slope, deltaMax)
-                # print("delta: " + str(delta) + "\n")
-                lastAdaptation[featureIndex] -= featureToMinimize[featureIndex] * delta
+                # print("delta: " + str(delta))
+                # print("before modification: " + str(lastAdaptation[featureIndex]))
+                lastAdaptation[featureIndex] += optimizationDirection[featureIndex] * delta
+
 
                 if lastAdaptation[featureIndex] < variableMin:
                     lastAdaptation[featureIndex] = variableMin
                 elif lastAdaptation[featureIndex] > variableMax:
                     lastAdaptation[featureIndex] = variableMax
 
+                # print("after modification: " + str(lastAdaptation[featureIndex]))
                 # print(lastAdaptation[0:len(controllableFeaturesNames)])
+                # print(excludedFeatures)
 
                 lastProba = model.predict_proba([lastAdaptation])[0, 1]
                 # print("proba: " + str(lastProba) + "\n")
@@ -183,8 +187,10 @@ if __name__ == '__main__':
                 if lastProba < targetProba:
                     excludedFeatures.append(featureIndex)
                     lastAdaptation = np.copy(adaptation)
+                    # print("discarded\n")
                 else:
                     adaptation = np.copy(lastAdaptation)
+                    # print("accepted\n")
 
                 step += 1
         else:
@@ -194,7 +200,8 @@ if __name__ == '__main__':
 
         print("-------------------------------------------------------------------------------------------------------")
 
-        print("Adaptation:\t" + str(adaptation))
+        print("Adaptation:")
+        print(adaptation[0:4])
         custom_proba = model.predict_proba([adaptation])[0, 1]
         print("Model confidence:\t" + str(custom_proba))
         customAlgoScore = 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
@@ -257,7 +264,8 @@ if __name__ == '__main__':
 
         if res.X is not None:
             print("-------------------------------------------------------------------------------------------------------")
-            speedup = nsga3Time / customTime
+            if step > 0:
+                speedup = nsga3Time / customTime
             scoreDiff = customAlgoScore - nsga3Score
             scoreDiffPercent = scoreDiff/nsga3Score
             scoreDiffPercentString = "{:.2%}".format(scoreDiffPercent)
@@ -265,7 +273,8 @@ if __name__ == '__main__':
             print("Score diff: " + str(scoreDiff))
             print("Score diff [% of loss]: " + scoreDiffPercentString + Style.RESET_ALL)
 
-            meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
+            if step > 0:
+                meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
             meanScoreDiff = (meanScoreDiff * (k - 1) + scoreDiff) / k
             meanScoreDiffPerc = (meanScoreDiffPerc * (k - 1) + scoreDiffPercent) / k
             print(Fore.YELLOW + "Mean speed-up: " + str(meanSpeedup) + "x")
@@ -290,7 +299,7 @@ if __name__ == '__main__':
     path = "../results"
     if not os.path.exists(path):
         os.makedirs(path)
-    results.to_csv(path + "/results.csv")
+    results.to_csv(path + "/results_req0.csv")
 
     """
     mod_dataset = X.to_numpy(copy=True)
