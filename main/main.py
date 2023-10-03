@@ -47,7 +47,7 @@ if __name__ == '__main__':
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirection = [1, -1, -1, -1]
 
-    reqs = [Req("req_0"), Req("req_1"), Req("req_2"), Req("req_3")]
+    reqs = [Req("req_0")]#, Req("req_1"), Req("req_2"), Req("req_3")]
     for req in reqs:
         X = ds.loc[:, featureNames]
         y = ds.loc[:, req.name]
@@ -329,7 +329,7 @@ if __name__ == '__main__':
 
         constantFeatures = X.iloc[rowIndex, 4:9]
         startTime = time.time()
-        res = nsga3([reqs[0].model, reqs[1].model, reqs[2].model, reqs[3].model], constantFeatures)
+        res = nsga3(models, constantFeatures)
         endTime = time.time()
         nsga3Time = endTime - startTime
 
@@ -358,7 +358,7 @@ if __name__ == '__main__':
             nsga3Score = np.max(scores)
             bestAdaptationIndex = np.where(scores == nsga3Score)
             nsga3Adaptation = res.X[bestAdaptationIndex][0]
-            nsga3_probas = vecPredictProba(models, features=[np.append(res.X[bestAdaptationIndex], constantFeatures)])[:, 1][0]
+            nsga3_probas = vecPredictProba(models, np.append(res.X[bestAdaptationIndex], constantFeatures))
 
             print("Best NSGA3 adaptation:")
             print(nsga3Adaptation)
