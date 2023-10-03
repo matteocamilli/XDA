@@ -99,14 +99,14 @@ if __name__ == '__main__':
     yDeltaMin = 1/100
     deltaMax = variableDomainSize/20
 
-    for k in range(1, 2):    # X.shape[0] + 1
+    for k in range(1, X.shape[0] + 1):    # X.shape[0] + 1
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)
 
         random.seed()
         req = reqs[1]        # random.randrange(0, len(reqs))
         print("Req: " + str(req.name))
 
-        rowIndex = 42     # k - 1     # random.randrange(0, X.shape[0])
+        rowIndex = k - 1     # random.randrange(0, X.shape[0])
         print("Row " + str(rowIndex))
         row = X.iloc[rowIndex, :].to_numpy()
 
@@ -120,6 +120,7 @@ if __name__ == '__main__':
 
         print(str(row))
         lime.saveExplanation(lime.explain(explainer, model, row), path + "starting")
+        print("-------------------------------------------------------------------------------------------------------")
 
         startTime = time.time()
 
@@ -203,8 +204,6 @@ if __name__ == '__main__':
         endTime = time.time()
         customTime = endTime - startTime
 
-        print("-------------------------------------------------------------------------------------------------------")
-
         customAdaptation = np.copy(adaptation)
         print("Adaptation:")
         print(customAdaptation[0:4])
@@ -216,15 +215,16 @@ if __name__ == '__main__':
         lime.saveExplanation(lime.explain(explainer, model, customAdaptation), path + "final")
 
         print("\nCustom algorithm execution time: " + str(customTime) + " s")
+        print("-------------------------------------------------------------------------------------------------------")
 
         # deeper optimization algorithm
         startTime = time.time()
 
         step = 0
         deltaScore = 100
-        increment = 1
+        increment = 5
         increaseDecrement = increment/10
-        treshold = increment/10
+        treshold = increment/100
 
         lastProba = model.predict_proba([adaptation])[0, 1]
         if deeperSearch and custom_proba > targetProba:
@@ -232,11 +232,11 @@ if __name__ == '__main__':
                 slopes = [pdp.getSlopeOfClosestLine(pdps[i], adaptation[i], lastProba) for i in range(len(controllableFeaturesNames))]
                 # print("slopes: " + str(slopes))
                 increments = [-s * d for s,d in zip(slopes,optimizationDirection)]
-                print("increments: " + str(increments))
+                # print("increments: " + str(increments))
                 featureToOptimize = increments.index(min(increments))
-                print("featureToOptimize: " + str(featureToOptimize))
+                # print("featureToOptimize: " + str(featureToOptimize))
                 featureToCompromise = increments.index(max(increments))
-                print("featureToCompromise: " + str(featureToCompromise))
+                # print("featureToCompromise: " + str(featureToCompromise))
 
                 scoreBefore = 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
 
@@ -259,35 +259,33 @@ if __name__ == '__main__':
                         lastAdaptation[featureToCompromise] = variableMax
 
                     lastProba = model.predict_proba([lastAdaptation])[0, 1]
-                    print("proba: " + str(lastProba))
+                    # print("proba: " + str(lastProba))
 
-                    print("decrement: " + str(decrement))
+                    # print("decrement: " + str(decrement))
                     decrement += increaseDecrement
 
-                print(adaptation[0:4])
-                print(lastAdaptation[0:4])
-                print([l - a for a, l in zip(adaptation, lastAdaptation)][0:4])
+                # print(adaptation[0:4])
+                # print(lastAdaptation[0:4])
+                # print([l - a for a, l in zip(adaptation, lastAdaptation)][0:4])
 
                 scoreAfter = 400 - (100 - lastAdaptation[0] + lastAdaptation[1] + lastAdaptation[2] + lastAdaptation[3])
                 # print("Score: " + str(scoreAfter))
                 deltaScore = scoreAfter - scoreBefore
-                print("deltaScore: " + str(deltaScore))
+                # print("deltaScore: " + str(deltaScore))
                 # print("proba: " + str(lastProba) + "\n")
 
                 if lastProba < targetProba or deltaScore < 0:
                     lastAdaptation = np.copy(adaptation)
-                    print("discarded\n")
+                    # print("discarded\n")
                 else:
                     adaptation = np.copy(lastAdaptation)
-                    print("accepted\n")
+                    # print("accepted\n")
                 step += 1
 
             endTime = time.time()
             deeperAlgoTime = endTime - startTime
 
         # if lastProba > targetProba:
-            print("-------------------------------------------------------------------------------------------------------")
-
             deeperAdaptation = np.copy(adaptation)
             print("Deeper Adaptation:")
             print(deeperAdaptation[0:4])
@@ -305,6 +303,7 @@ if __name__ == '__main__':
 
             print("\nDeeper algorithm execution time: " + str(deeperAlgoTime) + " s")
             print("\nDeeper algorithm time addition[%]: +" + "{:.2%}".format(deeperAlgoTime / customTime))
+            print("-------------------------------------------------------------------------------------------------------")
 
         else:
             deeperAlgoTime = 0
@@ -314,8 +313,6 @@ if __name__ == '__main__':
             deeperScoreImprovement = 0
             deeperScoreImprovementPerc = None
 
-
-        print("-------------------------------------------------------------------------------------------------------")
 
         constantFeatures = X.iloc[rowIndex, 4:9]
         startTime = time.time()
@@ -363,8 +360,6 @@ if __name__ == '__main__':
             nsga3Score = None
 
         print("\nNSGA3 execution time: " + str(nsga3Time) + " s")
-
-
 
         if res.X is not None:
             print("-------------------------------------------------------------------------------------------------------")
