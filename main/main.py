@@ -47,7 +47,7 @@ if __name__ == '__main__':
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirection = [1, -1, -1, -1]
 
-    reqs = [Req("req_0")]#, Req("req_1"), Req("req_2"), Req("req_3")]
+    reqs = [Req("req_1")]#, Req("req_1"), Req("req_2"), Req("req_3")]
     for req in reqs:
         X = ds.loc[:, featureNames]
         y = ds.loc[:, req.name]
@@ -115,7 +115,7 @@ if __name__ == '__main__':
     yDeltaMin = 1/100
     deltaMax = variableDomainSize/20
 
-    for k in range(1, X.shape[0] + 1):
+    for k in range(1, 20 + 1):
         random.seed()
         rowIndex = k - 1     # random.randrange(0, X.shape[0])
         row = X.iloc[rowIndex, :].to_numpy()
@@ -143,7 +143,7 @@ if __name__ == '__main__':
 
         # trivial solution
         adaptation = np.copy(row)
-        for i, best in enumerate(closestLineMaxPoints):
+        for i, best in enumerate(meanLineMaxPoints[reqs[0].name]):
             adaptation[i] = best
 
         lastAdaptation = np.copy(adaptation)
@@ -224,6 +224,7 @@ if __name__ == '__main__':
         print("\nCustom algorithm execution time: " + str(customTime) + " s")
         print("-------------------------------------------------------------------------------------------------------")
 
+        """
         # deeper optimization algorithm
         startTime = time.time()
 
@@ -233,7 +234,6 @@ if __name__ == '__main__':
         increaseDecrement = increment/50
         treshold = increment/100
 
-        """
         lastProba = model.predict_proba([adaptation])[0, 1]
         if deeperSearch and custom_proba > targetProba:
             while deltaScore > treshold and lastProba > targetProba:
