@@ -2,22 +2,19 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from numpy import ravel
 from IPython.display import display
-from sklearn.linear_model import LogisticRegression # Logistic Regression
-from sklearn.ensemble import RandomForestClassifier # Random Forests
+from sklearn.linear_model import LogisticRegression  # Logistic Regression
+from sklearn.ensemble import RandomForestClassifier  # Random Forests
 from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier # C5.0 (Decision Tree)
-from sklearn.neural_network import MLPClassifier # Neural Network
-from sklearn.ensemble import GradientBoostingClassifier # Gradient Boosting Machine (GBM)
-import xgboost as xgb # eXtreme Gradient Boosting Tree (xGBTree)
-
-# Import for AUC calculation
+from sklearn.tree import DecisionTreeClassifier  # C5.0 (Decision Tree)
+from sklearn.neural_network import MLPClassifier  # Neural Network
+from sklearn.ensemble import GradientBoostingClassifier  # Gradient Boosting Machine (GBM)
+import xgboost as xgb  # eXtreme Gradient Boosting Tree (xGBTree)
 from sklearn.metrics import roc_auc_score
 
 def constructModel(X_train, X_test, y_train, y_test, export = False):
 
-    ## Construct defect models
+    # Construct models
 
     # Logistic Regression
     lr_model = LogisticRegression(random_state=1234)
@@ -78,8 +75,5 @@ def constructModel(X_train, X_test, y_train, y_test, export = False):
         plt.tight_layout()
         plt.savefig('../plots/AUC.png')
         plt.show()
-
-    # goup models in list
-    #models = [lr_model, rf_model, dt_model, nn_model, gbm_model, xgb_model]
 
     return models[bestModel]

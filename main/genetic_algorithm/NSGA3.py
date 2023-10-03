@@ -1,5 +1,3 @@
-import time
-import pandas as pd
 import numpy as np
 from pymoo.core.problem import Problem
 from pymoo.algorithms.moo.nsga3 import NSGA3
@@ -10,9 +8,9 @@ from pymoo.visualization.scatter import Scatter
 
 
 class Adaptation(Problem):
-    def __init__(self, model, constantFeatures):
-        super().__init__(n_var=4, n_obj=4, n_constr=1, xl=0.0, xu=100.0)
-        self.model = model
+    def __init__(self, models, constantFeatures):
+        super().__init__(n_var=4, n_obj=4, n_constr=4, xl=0.0, xu=100.0)
+        self.models = models
         self.constantFeatures = constantFeatures
 
     def _evaluate(self, x, out, *args, **kwargs):
@@ -23,10 +21,13 @@ class Adaptation(Problem):
         f4 = x[:, 3]
 
         out["F"] = [f1, f2, f3, f4]
-        out["G"] = 0.8 - self.model.predict_proba(xFull)[:, 1]
+        out["G"] = [0.8 - self.models[0].predict_proba(xFull)[:, 1],
+                    0.8 - self.models[1].predict_proba(xFull)[:, 1],
+                    0.8 - self.models[2].predict_proba(xFull)[:, 1],
+                    0.8 - self.models[3].predict_proba(xFull)[:, 1]]
 
 
-def nsga3(model, constantFeatures):
+def nsga3(models, constantFeatures):
     # create the reference directions to be used for the optimization
     ref_dirs = get_reference_directions("das-dennis", 4, n_partitions=12)
 
@@ -41,7 +42,7 @@ def nsga3(model, constantFeatures):
     )
 
     # execute the optimization
-    res = minimize(Adaptation(model, constantFeatures),
+    res = minimize(Adaptation(models, constantFeatures),
                    algorithm,
                    seed=1,
                    termination=termination)
