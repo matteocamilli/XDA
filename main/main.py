@@ -12,6 +12,7 @@ import explainability_techniques.PDP as pdp
 from sklearn.model_selection import train_test_split
 from model.ModelConstructor import constructModel
 from genetic_algorithm.NSGA3 import nsga3
+from sklearn.neighbors import KNeighborsClassifier
 
 
 class Req:
@@ -19,11 +20,17 @@ class Req:
         self.name = name
 
 
-def vecPredictProba(models, features):
+def vecPredictProba(models, X):
     probas = []
     for model in models:
-        probas.append(model.predict_proba([features])[0, 1])
+        probas.append(model.predict_proba(X))
+    probas = np.ravel(probas)[1::2]
+    probas = np.column_stack(np.split(probas, n_reqs))
     return probas
+
+
+def score(adaptation):
+    return 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
 
 
 if __name__ == '__main__':
@@ -47,23 +54,35 @@ if __name__ == '__main__':
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirection = [1, -1, -1, -1]
 
-    reqs = [Req("req_1")]#, Req("req_1"), Req("req_2"), Req("req_3")]
-    for req in reqs:
-        X = ds.loc[:, featureNames]
-        y = ds.loc[:, req.name]
+    reqs = [Req("req_1")]#, Req("req_3"), Req("req_2"), Req("req_3")]
 
+    n_reqs = len(reqs)
+    n_neighbors = 10
+    n_controllableFeatures = len(controllableFeaturesNames)
+
+    # train a k nearest neighbors classifier only used to find the neighbors of a sample in the dataset
+    X = ds.loc[:, featureNames]
+    y = ds.loc[:, reqs[0].name]
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.4, random_state=42
+    )
+    y_test = np.ravel(y_test)
+    y_train = np.ravel(y_train)
+    neigh = KNeighborsClassifier()
+    neigh.fit(X_train, y_train)
+
+    for req in reqs:
+        print(Fore.RED + "Requirement: " + req.name + "\n" + Style.RESET_ALL)
+
+        y = ds.loc[:, req.name]
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.4, random_state=42
         )
-
         y_test = np.ravel(y_test)
         y_train = np.ravel(y_train)
 
-        print(Fore.RED + "Requirement: " + req.name + "\n" + Style.RESET_ALL)
-
         req.model = constructModel(X_train.values, X_test.values, y_train, y_test)
-
-        print("=======================================================================================================")
+        print("=" * 100)
 
         # make pdps
         req.pdps = {}
@@ -75,6 +94,10 @@ if __name__ == '__main__':
 
         # create lime explainer
         req.limeExplainer = lime.createLimeExplainer(X_train)
+
+    models = []
+    for req in reqs:
+        models.append(req.model)
 
     # make summary pdps
     path = "../plots/summary/individuals"
@@ -88,6 +111,7 @@ if __name__ == '__main__':
             pdps[i].append(req.pdps[i])
         summaryPdps.append(pdp.multiplyPdps(pdps[i], path + "/" + f + ".png"))
 
+    # metrics
     meanSpeedup = 0
     meanScoreDiff = 0
     meanScoreDiffPerc = 0
@@ -100,13 +124,15 @@ if __name__ == '__main__':
     deeperSearch = True
 
     # pdp max points of mean line can be computed a priori
+    """
     meanLineMaxPoints = {}
     for req in reqs:
         meanLineMaxPoints[req.name] = []
         for i in range(4):
             meanLineMaxPoints[req.name].append(pdp.getMaxPointOfMeanLine(req.pdps[i]))
+    """
 
-    targetProbas = np.array([0.8, 0.8, 0.8, 0.8])
+    targetConfidence = np.full((1, n_reqs), 0.5)
 
     variableMin = 0
     variableMax = 100
@@ -115,52 +141,63 @@ if __name__ == '__main__':
     yDeltaMin = 1/100
     deltaMax = variableDomainSize/20
 
-    for k in range(1, 20 + 1):
+    path = "../plots/adaptation/"
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    testNum = 20
+    for k in range(1, testNum + 1):
         random.seed()
-        rowIndex = k - 1     # random.randrange(0, X.shape[0])
-        row = X.iloc[rowIndex, :].to_numpy()
+        rowIndex = k - 1  # random.randrange(0, X_train.shape[0])
+        row = X_train.iloc[rowIndex, :].to_numpy()  # TODO use validation set instead of the training one
+
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)
         print("Row " + str(rowIndex) + ":\n" + str(row))
-
-        path = "../plots/adaptation/"
-        if not os.path.exists(path):
-            os.makedirs(path)
+        print("-" * 100)
 
         for req in reqs:
             lime.saveExplanation(lime.explain(req.limeExplainer, req.model, row), path + req.name + "_starting")
-        print("-------------------------------------------------------------------------------------------------------")
-
-        models = []
-        for req in reqs:
-            models.append(req.model)
 
         startTime = time.time()
 
-        # pdp max points of the closest line must be computed at each adaptation if needed
-        closestLineMaxPoints = []
-        for i in range(4):
-            closestLineMaxPoints.append(pdp.getMaxPointOfClosestLine(summaryPdps[i], row[i], np.prod(vecPredictProba(models, features=row))))
+        neighbors = np.ravel(neigh.kneighbors([row], n_neighbors, False))
 
-        # trivial solution
-        adaptation = np.copy(row)
-        for i, best in enumerate(meanLineMaxPoints[reqs[0].name]):
-            adaptation[i] = best
+        # starting solutions
+        adaptations = np.empty((n_neighbors * n_reqs, len(row)))
+        for i in range(n_neighbors):
+            for j in range(n_reqs):
+                neighborIndex = neighbors[i]
+                controllableFeatures = X_train.iloc[neighborIndex, :n_controllableFeatures]
+                controllableFeatures[j] = pdp.getMaxPointOfLine(summaryPdps[j], neighborIndex)
+                adaptations[i * n_reqs + j] = np.concatenate([controllableFeatures, np.copy(row)[n_controllableFeatures:]])
 
-        lastAdaptation = np.copy(adaptation)
+        adaptationsConfidence = vecPredictProba(models, adaptations)
 
-        step = 0
-        excludedFeatures = []
-        lastProbas = vecPredictProba(models, features=lastAdaptation)
-        # check if the best possible solution doesn't solve the problem
-        if (lastProbas > targetProbas).all():
-            while (lastProbas > targetProbas).all() or len(excludedFeatures) < len(controllableFeaturesNames):
+        validAdaptations = []
+        for i, confidence in enumerate(adaptationsConfidence):
+            if (confidence >= targetConfidence).all():
+                validAdaptations.append(i)
+
+        adaptations = adaptations[validAdaptations]
+        adaptationsConfidence = adaptationsConfidence[validAdaptations]
+
+        # enhanced solutions
+        adaptationsSteps = []
+        for n in range(len(adaptations)):
+            step = 0
+            excludedFeatures = []
+            adaptation = adaptations[n]
+            confidence = adaptationsConfidence[n]
+            lastAdaptation = np.copy(adaptation)
+            lastConfidence = np.copy(confidence)
+            while (lastConfidence >= targetConfidence).all() or len(excludedFeatures) < n_controllableFeatures:
                 # select the next feature to modify
                 featureIndex = None
                 bestIncrement = None
                 bestSlope = None
-                for i in range(len(controllableFeaturesNames)):
+                for i in range(n_controllableFeatures):
                     if i not in excludedFeatures:
-                        slope = pdp.getSlopeOfClosestLine(summaryPdps[i], adaptation[i], np.prod(lastProbas))
+                        slope = pdp.getSlopeOfClosestLine(summaryPdps[i], adaptation[i], np.prod(lastConfidence))
                         increment = slope * optimizationDirection[i]
                         if bestIncrement is None or increment > bestIncrement:
                             featureIndex = i
@@ -168,7 +205,7 @@ if __name__ == '__main__':
                             bestIncrement = increment
 
                 # stop if no feature can be improved
-                if featureIndex == -1:
+                if featureIndex is None:
                     break
                 # print(featureIndex)
 
@@ -192,37 +229,47 @@ if __name__ == '__main__':
                 # print(lastAdaptation[0:len(controllableFeaturesNames)])
                 # print(excludedFeatures)
 
-                lastProbas = vecPredictProba(models, features=lastAdaptation)
+                lastConfidence = vecPredictProba(models, [lastAdaptation])
                 # print("proba: " + str(lastProbas) + "\n")
 
-                if (lastProbas < targetProbas).all():
-                    excludedFeatures.append(featureIndex)
+                if (lastConfidence < targetConfidence).any():
                     lastAdaptation = np.copy(adaptation)
+                    lastConfidence = np.copy(confidence)
+                    excludedFeatures.append(featureIndex)
                     # print("discarded\n")
                 else:
                     adaptation = np.copy(lastAdaptation)
+                    confidence = np.copy(lastConfidence)
                     # print("accepted\n")
 
                 step += 1
 
-        else:
-            print("Adaptation not found, using best adaptation")
+            adaptations[n] = adaptation
+            adaptationsConfidence[n] = confidence
+            adaptationsSteps.append(step)
+
         endTime = time.time()
         customTime = endTime - startTime
-        customAdaptation = np.copy(adaptation)
 
-        print("Adaptation:\n" + str(customAdaptation[0:4]))
-        custom_probas = vecPredictProba(models, features=customAdaptation)
-        print("Model confidence:\t" + str(custom_probas))
-        customAlgoScore = 400 - (100 - customAdaptation[0] + customAdaptation[1] + customAdaptation[2] + customAdaptation[3])
-        print("Score of the adaptation:\t" + str(customAlgoScore) + "/400")
-        print("Total steps:\t" + str(step))
+        if len(adaptations) > 0:
+            scores = [score(a) for a in adaptations]
+            customScore = np.max(scores)
+            customAdaptationIndex = np.where(scores == customScore)[0][0]
+            customAdaptation = adaptations[customAdaptationIndex]
+            customConfidence = adaptationsConfidence[customAdaptationIndex]
 
-        for req in reqs:
-            lime.saveExplanation(lime.explain(req.limeExplainer, req.model, row), path + req.name + "_final")
+            for req in reqs:
+                lime.saveExplanation(lime.explain(req.limeExplainer, req.model, row), path + req.name + "_final")
 
-        print("\nCustom algorithm execution time: " + str(customTime) + " s")
-        print("-------------------------------------------------------------------------------------------------------")
+            print("Adaptation: " + str(customAdaptation[0:n_controllableFeatures]))
+            print("Model confidence:                " + str(customConfidence))
+            print("Score of the adaptation:         " + str(customScore) + " / 400\n")
+            print("Total steps:                     " + str(adaptationsSteps[customAdaptationIndex]))
+        else:
+            print("No adaptation found")
+
+        print("Custom algorithm execution time: " + str(customTime) + " s")
+        print("-" * 100)
 
         """
         # deeper optimization algorithm
@@ -329,7 +376,7 @@ if __name__ == '__main__':
 
         constantFeatures = X.iloc[rowIndex, 4:9]
         startTime = time.time()
-        res = nsga3(models, constantFeatures)
+        res = nsga3(models, targetConfidence, constantFeatures)
         endTime = time.time()
         nsga3Time = endTime - startTime
 
@@ -354,11 +401,11 @@ if __name__ == '__main__':
         """
 
         if res.X is not None:
-            scores = np.array([400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3]) for adaptation in res.X])
+            scores = [score(a) for a in res.X]
             nsga3Score = np.max(scores)
             bestAdaptationIndex = np.where(scores == nsga3Score)
             nsga3Adaptation = res.X[bestAdaptationIndex][0]
-            nsga3_probas = vecPredictProba(models, np.append(res.X[bestAdaptationIndex], constantFeatures))
+            nsga3_probas = vecPredictProba(models, [np.append(res.X[bestAdaptationIndex], constantFeatures)])
 
             print("Best NSGA3 adaptation:")
             print(nsga3Adaptation)
@@ -375,19 +422,19 @@ if __name__ == '__main__':
         print("\nNSGA3 execution time: " + str(nsga3Time) + " s")
 
         if res.X is not None:
-            print("-------------------------------------------------------------------------------------------------------")
-            if step > 0:
+            print("-" * 100)
+            if customAdaptation is not None:
                 speedup = nsga3Time / (customTime + deeperAlgoTime)
             else:
                 speedup = None
-            scoreDiff = customAlgoScore + deeperScoreImprovement - nsga3Score
+            scoreDiff = customScore + deeperScoreImprovement - nsga3Score
             scoreDiffPercent = scoreDiff/nsga3Score
             scoreDiffPercentString = "{:.2%}".format(scoreDiffPercent)
             print(Fore.GREEN + "\nSpeed-up: " + str(speedup) + "x")
             print("Score diff: " + str(scoreDiff))
             print("Score diff [% of loss]: " + scoreDiffPercentString + Style.RESET_ALL)
 
-            if step > 0:
+            if customAdaptation is not None:
                 meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
             meanScoreDiff = (meanScoreDiff * (k - 1) + scoreDiff) / k
             meanScoreDiffPerc = (meanScoreDiffPerc * (k - 1) + scoreDiffPercent) / k
@@ -400,11 +447,11 @@ if __name__ == '__main__':
             scoreDiffPercentString = None
             speedup = None
 
-        print("=======================================================================================================")
+        print("=" * 100)
 
         results.append([nsga3Adaptation, customAdaptation, deeperAdaptation,
-                        nsga3_probas, custom_probas, deeper_proba,
-                        nsga3Score, customAlgoScore, deeperAlgoScore, deeperScoreImprovementPerc, scoreDiff, scoreDiffPercentString,
+                        nsga3_probas, customConfidence, deeper_proba,
+                        nsga3Score, customScore, deeperAlgoScore, deeperScoreImprovementPerc, scoreDiff, scoreDiffPercentString,
                         nsga3Time, customTime, deeperAlgoTime, speedup])
 
     results = pd.DataFrame(results, columns=["nsga3_adaptation", "custom_adaptation", "deeper_adaptation",
