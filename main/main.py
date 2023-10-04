@@ -50,38 +50,36 @@ if __name__ == '__main__':
                     "firm obstacle"]
     controllableFeaturesNames = featureNames[0:4]
     externalFeaturesNames = featureNames[4:9]
+    reqNames = ["req_0", "req_1", "req_2", "req_3"]
 
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirection = [1, -1, -1, -1]
 
-    reqs = [Req("req_1")]#, Req("req_3"), Req("req_2"), Req("req_3")]
+    reqs = [Req(reqNames[3])]
 
     n_reqs = len(reqs)
     n_neighbors = 10
     n_controllableFeatures = len(controllableFeaturesNames)
 
-    # train a k nearest neighbors classifier only used to find the neighbors of a sample in the dataset
+    # split the dataset
     X = ds.loc[:, featureNames]
-    y = ds.loc[:, reqs[0].name]
+    y = ds.loc[:, reqNames]
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.4, random_state=42
     )
-    y_test = np.ravel(y_test)
-    y_train = np.ravel(y_train)
+
+    # train a k nearest neighbors classifier only used to find the neighbors of a sample in the dataset
+    # based on external features only
     neigh = KNeighborsClassifier()
-    neigh.fit(X_train, y_train)
+    neigh.fit(X_train.loc[:, externalFeaturesNames], np.zeros((X_train.shape[0], 1)))
 
     for req in reqs:
         print(Fore.RED + "Requirement: " + req.name + "\n" + Style.RESET_ALL)
 
-        y = ds.loc[:, req.name]
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.4, random_state=42
-        )
-        y_test = np.ravel(y_test)
-        y_train = np.ravel(y_train)
-
-        req.model = constructModel(X_train.values, X_test.values, y_train, y_test)
+        req.model = constructModel(X_train.values,
+                                   X_test.values,
+                                   np.ravel(y_train.loc[:, req.name]),
+                                   np.ravel(y_test.loc[:, req.name]))
         print("=" * 100)
 
         # make pdps
@@ -132,7 +130,7 @@ if __name__ == '__main__':
             meanLineMaxPoints[req.name].append(pdp.getMaxPointOfMeanLine(req.pdps[i]))
     """
 
-    targetConfidence = np.full((1, n_reqs), 0.5)
+    targetConfidence = np.full((1, n_reqs), 0.8)
 
     variableMin = 0
     variableMax = 100
@@ -160,18 +158,22 @@ if __name__ == '__main__':
 
         startTime = time.time()
 
-        neighbors = np.ravel(neigh.kneighbors([row], n_neighbors, False))
+        print(neigh.kneighbors([row[n_controllableFeatures:]], n_neighbors))
+        neighbors = np.ravel(neigh.kneighbors([row[n_controllableFeatures:]], n_neighbors, False))
 
         # starting solutions
-        adaptations = np.empty((n_neighbors * n_reqs, len(row)))
+        adaptations = np.empty((n_neighbors, len(row)))
         for i in range(n_neighbors):
-            for j in range(n_reqs):
-                neighborIndex = neighbors[i]
-                controllableFeatures = X_train.iloc[neighborIndex, :n_controllableFeatures]
-                controllableFeatures[j] = pdp.getMaxPointOfLine(summaryPdps[j], neighborIndex)
-                adaptations[i * n_reqs + j] = np.concatenate([controllableFeatures, np.copy(row)[n_controllableFeatures:]])
+            neighborIndex = neighbors[i]
+            adaptedFeatures = np.copy(X_train.iloc[neighborIndex, :n_controllableFeatures])
+            for j in range(n_controllableFeatures):
+                adaptedFeatures[j] = pdp.getMaxPointOfLine(summaryPdps[j], neighborIndex)
+            adaptations[i] = np.concatenate([adaptedFeatures, np.copy(row)[n_controllableFeatures:]])
 
         adaptationsConfidence = vecPredictProba(models, adaptations)
+
+        print(adaptations)
+        print(adaptationsConfidence)
 
         validAdaptations = []
         for i, confidence in enumerate(adaptationsConfidence):
