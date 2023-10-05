@@ -111,12 +111,12 @@ if __name__ == '__main__':
         summaryPdps.append(pdp.multiplyPdps(pdps[i], path + "/" + f + ".png"))
 
     # metrics
-    meanSpeedup = 0
-    meanScoreDiff = 0
-    meanScoreDiffPerc = 0
-    meanScoreImprovement = 0
-    meanScoreImprovementPerc = 0
-    meanTimeAddition = 0
+    meanCustomScore = 0
+    meanNSGA3Score = 0
+    meanSpeedup = 0             # custom vs nsga3
+    meanScoreDiff = 0           # custom vs nsga3
+    meanDeeperTimeDiff = 0      # deeper vs custom
+    meanDeeperScoreDiff = 0     # deeper vs custom
     failedAdaptations = 0
 
     # adaptations
@@ -380,15 +380,16 @@ if __name__ == '__main__':
             deeperScoreImprovement = 0
             deeperScoreImprovementPerc = None
         """
-        deeperAlgoTime = 0
+        deeperTime = 0
         deeperAdaptation = None
-        deeper_proba = None
-        deeperAlgoScore = None
+        deeperConfidence = None
+        deeperScore = None
+        deeperScoreDiff = 0
         deeperScoreImprovement = 0
-        deeperScoreImprovementPerc = None
 
         # genetic algorithm
         externalFeatures = row[n_controllableFeatures:]
+
         startTime = time.time()
         res = nsga3(models, targetConfidence, externalFeatures)
         endTime = time.time()
@@ -435,41 +436,44 @@ if __name__ == '__main__':
         print("-" * 100)
 
         scoreDiff = None
-        scoreDiffPercent = None
-        scoreDiffPercentString = None
+        scoreImprovement = None
 
-        speedup = nsga3Time / (customTime + deeperAlgoTime)
+        speedup = nsga3Time / (customTime + deeperTime)
         meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
-        print(Fore.GREEN + "Speed-up: " + str(speedup) + "x")
+        print(Fore.GREEN + "(custom vs nsga3)  Speed-up: " + " " * 14 + str(speedup) + "x")
 
         if customAdaptation is not None and nsga3Adaptation is not None:
             scoreDiff = customScore + deeperScoreImprovement - nsga3Score
-            scoreDiffPercent = scoreDiff / nsga3Score
-            scoreDiffPercentString = "{:.2%}".format(scoreDiffPercent)
-            print("Score diff: " + str(scoreDiff))
-            print("Score diff [% of loss]: " + scoreDiffPercentString)
+            scoreImprovement = scoreDiff / nsga3Score
+            print("(custom vs nsga3)  Score diff:        " + " " * 5 + str(scoreDiff))
+            print("(custom vs nsga3)  Score improvement: " + " " * 5 + "{:.2%}".format(scoreImprovement))
         else:
             failedAdaptations += 1
 
-        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up: " + str(meanSpeedup) + "x")
+        print(Style.RESET_ALL + Fore.YELLOW + "(custom vs nsga3)  Mean speed-up: " + " " * 9 + str(meanSpeedup) + "x")
 
         if customAdaptation is not None and nsga3Adaptation is not None:
+            meanCustomScore = (meanCustomScore * (k - 1 - failedAdaptations) + customScore) / (k - failedAdaptations)
+            meanNSGA3Score = (meanNSGA3Score * (k - 1 - failedAdaptations) + nsga3Score) / (k - failedAdaptations)
             meanScoreDiff = (meanScoreDiff * (k - 1 - failedAdaptations) + scoreDiff) / (k - failedAdaptations)
-            meanScoreDiffPerc = (meanScoreDiffPerc * (k - 1 - failedAdaptations) + scoreDiffPercent) / (k - failedAdaptations) # TODO correct: probably wrong
-            print("Mean score improvement with deeperAlgo: " + str(meanScoreImprovementPerc))
-            print("Mean score diff: " + str(meanScoreDiff))
-            print("Mean score diff [% of loss]: " + str("{:.2%}".format(meanScoreDiffPerc)))
+            meanDeeperScoreDiff = (meanDeeperScoreDiff * (k - 1 - failedAdaptations) + deeperScoreDiff) / (k - failedAdaptations)
+            meanScoreImprovement = meanScoreDiff / meanNSGA3Score
+            meanDeeperScoreImprovement = meanDeeperScoreDiff / meanCustomScore
+            print("(custom vs nsga3)  Mean score diff:        " + str(meanScoreDiff))
+            print("(custom vs nsga3)  Mean score improvement: " + "{:.2%}".format(meanScoreImprovement))
+            print("(deeper vs custom) Mean score diff:        " + str(meanDeeperScoreDiff))
+            print("(deeper vs custom) Mean score improvement: " + "{:.2%}".format(meanDeeperScoreImprovement))
 
         print(Style.RESET_ALL + "=" * 100)
 
         results.append([nsga3Adaptation, customAdaptation, deeperAdaptation,
-                        nsga3Confidence, customConfidence, deeper_proba,
-                        nsga3Score, customScore, deeperAlgoScore, deeperScoreImprovementPerc, scoreDiff, scoreDiffPercentString,
-                        nsga3Time, customTime, deeperAlgoTime, speedup])
+                        nsga3Confidence, customConfidence, deeperConfidence,
+                        nsga3Score, customScore, deeperScore, deeperScoreImprovement, scoreDiff, scoreImprovement,
+                        nsga3Time, customTime, deeperTime, speedup])
 
     results = pd.DataFrame(results, columns=["nsga3_adaptation", "custom_adaptation", "deeper_adaptation",
                                              "nsga3_confidence", "custom_confidence", "deeper_proba",
-                                             "nsga3_score", "custom_score", "deeper_score", "deeper_improvement[%]", "score_diff", "score_diff[%]",
+                                             "nsga3_score", "custom_score", "deeper_score", "deeper_improvement[%]", "score_diff", "score_improvement[%]",
                                              "nsga3_time", "custom_time", "deeper_time", "speed-up"])
     path = "../results"
     if not os.path.exists(path):
