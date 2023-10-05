@@ -38,7 +38,7 @@ if __name__ == '__main__':
     # suppress all warnings
     warnings.filterwarnings("ignore")
 
-    ds = pd.read_csv('../datasets/dataset1000.csv')
+    ds = pd.read_csv('../datasets/dataset5000.csv')
     featureNames = ["cruise speed",
                     "image resolution",
                     "illuminance",
@@ -55,11 +55,13 @@ if __name__ == '__main__':
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirection = [1, -1, -1, -1]
 
-    reqs = [Req(reqNames[0]), Req(reqNames[3])]
+    reqs = [Req(reqNames[0])]
 
     n_reqs = len(reqs)
     n_neighbors = 10
     n_controllableFeatures = len(controllableFeaturesNames)
+
+    targetConfidence = np.full((1, n_reqs), 0.8)
 
     # split the dataset
     X = ds.loc[:, featureNames]
@@ -115,6 +117,7 @@ if __name__ == '__main__':
     meanScoreImprovement = 0
     meanScoreImprovementPerc = 0
     meanTimeAddition = 0
+    failedAdaptations = 0
 
     # adaptations
     results = []
@@ -128,8 +131,6 @@ if __name__ == '__main__':
         for i in range(4):
             meanLineMaxPoints[req.name].append(pdp.getMaxPointOfMeanLine(req.pdps[i]))
     """
-
-    targetConfidence = np.full((1, n_reqs), 0.6)
 
     variableMin = 0
     variableMax = 100
@@ -168,12 +169,13 @@ if __name__ == '__main__':
 
             # TODO make this reliable: the adaptation changes randomly based on the order in which features are modified
             # this can be done multiple times but it doesn't converge (I tried)
-            controllableFeatures = list(range(n_controllableFeatures))
-            while len(controllableFeatures) > 0:
-                featureIndex = random.choice(controllableFeatures)
-                adaptation[featureIndex] = pdp.getMaxPointOfLine(summaryPdps[featureIndex], neighborIndex)
-                neighborIndex = np.ravel(neigh.kneighbors([adaptation], 1, False))[0]
-                controllableFeatures.remove(featureIndex)
+            for n in range(10):
+                controllableFeatures = list(range(n_controllableFeatures))
+                while len(controllableFeatures) > 0:
+                    featureIndex = random.choice(controllableFeatures)
+                    adaptation[featureIndex] = pdp.getMaxPointOfLine(summaryPdps[featureIndex], neighborIndex)
+                    neighborIndex = np.ravel(neigh.kneighbors([adaptation], 1, False))[0]
+                    controllableFeatures.remove(featureIndex)
             adaptations[i] = adaptation
 
         adaptationsConfidence = vecPredictProba(models, adaptations)
@@ -430,33 +432,35 @@ if __name__ == '__main__':
 
         print("NSGA3 execution time:                " + str(nsga3Time) + " s")
 
-        if nsga3Adaptation is not None:
-            print("-" * 100)
-            if customAdaptation is not None:
-                speedup = nsga3Time / (customTime + deeperAlgoTime)
-            else:
-                speedup = None
-            scoreDiff = customScore + deeperScoreImprovement - nsga3Score
-            scoreDiffPercent = scoreDiff/nsga3Score
-            scoreDiffPercentString = "{:.2%}".format(scoreDiffPercent)
-            print(Fore.GREEN + "\nSpeed-up: " + str(speedup) + "x")
-            print("Score diff: " + str(scoreDiff))
-            print("Score diff [% of loss]: " + scoreDiffPercentString + Style.RESET_ALL)
+        print("-" * 100)
 
-            if customAdaptation is not None:
-                meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
-            meanScoreDiff = (meanScoreDiff * (k - 1) + scoreDiff) / k
-            meanScoreDiffPerc = (meanScoreDiffPerc * (k - 1) + scoreDiffPercent) / k
-            print(Fore.YELLOW + "Mean speed-up: " + str(meanSpeedup) + "x")
+        scoreDiff = None
+        scoreDiffPercent = None
+        scoreDiffPercentString = None
+
+        speedup = nsga3Time / (customTime + deeperAlgoTime)
+        meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
+        print(Fore.GREEN + "Speed-up: " + str(speedup) + "x")
+
+        if customAdaptation is not None and nsga3Adaptation is not None:
+            scoreDiff = customScore + deeperScoreImprovement - nsga3Score
+            scoreDiffPercent = scoreDiff / nsga3Score
+            scoreDiffPercentString = "{:.2%}".format(scoreDiffPercent)
+            print("Score diff: " + str(scoreDiff))
+            print("Score diff [% of loss]: " + scoreDiffPercentString)
+        else:
+            failedAdaptations += 1
+
+        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up: " + str(meanSpeedup) + "x")
+
+        if customAdaptation is not None and nsga3Adaptation is not None:
+            meanScoreDiff = (meanScoreDiff * (k - 1 - failedAdaptations) + scoreDiff) / (k - failedAdaptations)
+            meanScoreDiffPerc = (meanScoreDiffPerc * (k - 1 - failedAdaptations) + scoreDiffPercent) / (k - failedAdaptations) # TODO correct: probably wrong
             print("Mean score improvement with deeperAlgo: " + str(meanScoreImprovementPerc))
             print("Mean score diff: " + str(meanScoreDiff))
-            print("Mean score diff [% of loss]: " + str("{:.2%}".format(meanScoreDiffPerc)) + "\n" + Style.RESET_ALL)
-        else:
-            scoreDiff = None
-            scoreDiffPercentString = None
-            speedup = None
+            print("Mean score diff [% of loss]: " + str("{:.2%}".format(meanScoreDiffPerc)))
 
-        print("=" * 100)
+        print(Style.RESET_ALL + "=" * 100)
 
         results.append([nsga3Adaptation, customAdaptation, deeperAdaptation,
                         nsga3Confidence, customConfidence, deeper_proba,
