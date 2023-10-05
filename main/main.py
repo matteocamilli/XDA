@@ -136,8 +136,7 @@ if __name__ == '__main__':
     variableMax = 100
     variableDomainSize = variableMax - variableMin
 
-    yDeltaMin = 1/100
-    deltaMax = variableDomainSize/20
+    delta = variableDomainSize / 100
 
     path = "../plots/adaptation/"
     if not os.path.exists(path):
@@ -167,15 +166,10 @@ if __name__ == '__main__':
             neighborIndex = neighbors[i]
             adaptation = np.copy(row)
 
-            # TODO make this reliable: the adaptation changes randomly based on the order in which features are modified
-            # this can be done multiple times but it doesn't converge (I tried)
-            for n in range(10):
-                controllableFeatures = list(range(n_controllableFeatures))
-                while len(controllableFeatures) > 0:
-                    featureIndex = random.choice(controllableFeatures)
-                    adaptation[featureIndex] = pdp.getMaxPointOfLine(summaryPdps[featureIndex], neighborIndex)
-                    neighborIndex = np.ravel(neigh.kneighbors([adaptation], 1, False))[0]
-                    controllableFeatures.remove(featureIndex)
+            for j in range(n_controllableFeatures):
+                adaptation[j] = pdp.getMaxPointOfLine(summaryPdps[j], neighborIndex)
+                neighborIndex = np.ravel(neigh.kneighbors([adaptation], 1, False))[0]
+
             adaptations[i] = adaptation
 
         adaptationsConfidence = vecPredictProba(models, adaptations)
@@ -191,41 +185,38 @@ if __name__ == '__main__':
         adaptations = adaptations[validAdaptations]
         adaptationsConfidence = adaptationsConfidence[validAdaptations]
 
-        # enhanced solutions
-        adaptationsSteps = []
-        for n in range(len(adaptations)):
-            step = 0
+        if len(adaptations) > 0:
+            bestAdaptationIndex = 0  # TODO use TA (the ranking algorithm) to get best adaptation
+
+            # enhance solution
+            steps = 0
             excludedFeatures = []
-            adaptation = adaptations[n]
-            confidence = adaptationsConfidence[n]
+            adaptation = adaptations[bestAdaptationIndex]
+            confidence = adaptationsConfidence[bestAdaptationIndex]
+            print(adaptation)
+            print(confidence)
             lastAdaptation = np.copy(adaptation)
             lastConfidence = np.copy(confidence)
             while (lastConfidence >= targetConfidence).all() or len(excludedFeatures) < n_controllableFeatures:
                 # select the next feature to modify
                 featureIndex = None
-                bestIncrement = None
+                minConfidenceLoss = None
                 bestSlope = None
                 for i in range(n_controllableFeatures):
                     if i not in excludedFeatures:
-                        slope = pdp.getSlopeOfClosestLine(summaryPdps[i], adaptation[i], np.prod(lastConfidence))
-                        increment = slope * optimizationDirection[i]
-                        if bestIncrement is None or increment > bestIncrement:
+                        neighborIndex = np.ravel(neigh.kneighbors([adaptation], 1, False))[0]
+                        slope = pdp.getSlope(summaryPdps[i], adaptation[i], neighborIndex)
+                        confidenceLoss = slope * optimizationDirection[i]
+                        if minConfidenceLoss is None or confidenceLoss < minConfidenceLoss:
                             featureIndex = i
                             bestSlope = slope
-                            bestIncrement = increment
+                            minConfidenceLoss = confidenceLoss
 
                 # stop if no feature can be improved
                 if featureIndex is None:
                     break
-                # print(featureIndex)
 
                 # modify the selected feature
-                # print("slope: " + str(bestSlope))
-                # yDelta = max((lastProbas - targetProbas) * 1.1 / 4, yDeltaMin)
-                # print("yDelta :" + str(yDelta))
-                delta = 1  # min(yDelta / slope, deltaMax)
-                # print("delta: " + str(delta))
-                # print("before modification: " + str(lastAdaptation[featureIndex]))
                 lastAdaptation[featureIndex] += optimizationDirection[featureIndex] * delta
 
                 if lastAdaptation[featureIndex] < variableMin:
@@ -252,21 +243,15 @@ if __name__ == '__main__':
                     confidence = np.copy(lastConfidence)
                     # print("accepted\n")
 
-                step += 1
-
-            adaptations[n] = adaptation
-            adaptationsConfidence[n] = confidence
-            adaptationsSteps.append(step)
+                steps += 1
 
         endTime = time.time()
         customTime = endTime - startTime
 
         if len(adaptations) > 0:
-            scores = [score(a) for a in adaptations]
-            customScore = np.max(scores)
-            customAdaptationIndex = np.where(scores == customScore)[0][0]
-            customAdaptation = adaptations[customAdaptationIndex]
-            customConfidence = adaptationsConfidence[customAdaptationIndex]
+            customAdaptation = adaptation
+            customConfidence = confidence
+            customScore = score(customAdaptation)
 
             for req in reqs:
                 lime.saveExplanation(lime.explain(req.limeExplainer, req.model, row), path + req.name + "_final")
@@ -274,7 +259,7 @@ if __name__ == '__main__':
             print("Best adaptation: " + str(customAdaptation[0:n_controllableFeatures]))
             print("Model confidence:                " + str(customConfidence))
             print("Adaptation score:                " + str(customScore) + " / 400")
-            print("Total steps:                     " + str(adaptationsSteps[customAdaptationIndex]))
+            print("Total steps:                     " + str(steps))
         else:
             print("No adaptation found")
             customAdaptation = None
@@ -431,7 +416,7 @@ if __name__ == '__main__':
             nsga3Confidence = None
             nsga3Score = None
 
-        print("NSGA3 execution time:                " + str(nsga3Time) + " s")
+        print("NSGA3 execution time:            " + str(nsga3Time) + " s")
 
         print("-" * 100)
 
