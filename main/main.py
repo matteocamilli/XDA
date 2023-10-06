@@ -25,6 +25,8 @@ def score(adaptation):
 
 
 if __name__ == '__main__':
+    programStartTime = time.time()
+
     os.chdir(sys.path[0])
 
     # suppress all warnings
@@ -99,10 +101,10 @@ if __name__ == '__main__':
     for f in files:
         os.remove(f)
 
-    testNum = 20
+    testNum = 200
     for k in range(1, testNum + 1):
         random.seed()
-        rowIndex = k - 1  # random.randrange(0, X_test.shape[0])
+        rowIndex = random.randrange(0, X_test.shape[0])
         row = X_test.iloc[rowIndex, :].to_numpy()
 
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)
@@ -203,3 +205,7 @@ if __name__ == '__main__':
     if not os.path.exists(path):
         os.makedirs(path)
     results.to_csv(path + "/results.csv")
+
+    programEndTime = time.time()
+    totalExecutionTime = programEndTime - programStartTime
+    print("\nProgram execution time: " + str(totalExecutionTime / 60) + " m")
