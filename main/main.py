@@ -1,11 +1,12 @@
-import random
 import sys
 import os
+import glob
 import time
 import warnings
-from colorama import Fore, Style
+import random
 import pandas as pd
 import numpy as np
+from colorama import Fore, Style
 from sklearn.model_selection import train_test_split
 from model.ModelConstructor import constructModel
 import explainability_techniques.LIME as lime
@@ -25,6 +26,7 @@ def score(adaptation):
 
 if __name__ == '__main__':
     os.chdir(sys.path[0])
+
     # suppress all warnings
     warnings.filterwarnings("ignore")
 
@@ -44,13 +46,13 @@ if __name__ == '__main__':
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirections = [1, -1, -1, -1]
 
-    reqs = ["req_0", "req_1"]#, "req_2", "req_3"]
+    reqs = ["req_0", "req_1", "req_2", "req_3"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
     n_controllableFeatures = len(controllableFeaturesNames)
 
-    targetConfidence = np.full((1, n_reqs), 0.8)
+    targetConfidence = np.full((1, n_reqs), 0.8)[0]
 
     # split the dataset
     X = ds.loc[:, featureNames]
@@ -64,9 +66,9 @@ if __name__ == '__main__':
         print(Fore.RED + "Requirement: " + req + "\n" + Style.RESET_ALL)
 
         models.append(constructModel(X_train.values,
-                                   X_test.values,
-                                   np.ravel(y_train.loc[:, req]),
-                                   np.ravel(y_test.loc[:, req])))
+                                     X_test.values,
+                                     np.ravel(y_train.loc[:, req]),
+                                     np.ravel(y_test.loc[:, req])))
         print("=" * 100)
 
     controllableFeatureDomains = np.repeat([[0, 100]], n_controllableFeatures, 0)
@@ -82,26 +84,20 @@ if __name__ == '__main__':
     # metrics
     meanCustomScore = 0
     meanNSGA3Score = 0
-    meanSpeedup = 0             # custom vs nsga3
-    meanScoreDiff = 0           # custom vs nsga3
+    meanSpeedup = 0
+    meanScoreDiff = 0
     failedAdaptations = 0
 
     # adaptations
     results = []
-    deeperSearch = True
 
-    # pdp max points of mean line can be computed a priori
-    """
-    meanLineMaxPoints = {}
-    for req in reqs:
-        meanLineMaxPoints[req.name] = []
-        for i in range(4):
-            meanLineMaxPoints[req.name].append(pdp.getMaxPointOfMeanLine(req.pdps[i]))
-    """
-
-    path = "../plots/adaptation/"
+    path = "../plots/adaptations"
     if not os.path.exists(path):
         os.makedirs(path)
+
+    files = glob.glob(path + "/*")
+    for f in files:
+        os.remove(f)
 
     testNum = 20
     for k in range(1, testNum + 1):
@@ -114,7 +110,8 @@ if __name__ == '__main__':
         print("-" * 100)
 
         for i, req in enumerate(reqs):
-            lime.saveExplanation(lime.explain(limeExplainer, models[i], row), path + req + "_starting")
+            lime.saveExplanation(lime.explain(limeExplainer, models[i], row),
+                                 path + "/" + str(k) + "_" + req + "_starting")
 
         startTime = time.time()
         customAdaptation, customConfidence = customPlanner.findAdaptation(row)
@@ -125,7 +122,8 @@ if __name__ == '__main__':
             customScore = score(customAdaptation)
 
             for i, req in enumerate(reqs):
-                lime.saveExplanation(lime.explain(limeExplainer, models[i], customAdaptation), path + req + "_final")
+                lime.saveExplanation(lime.explain(limeExplainer, models[i], customAdaptation),
+                                     path + "/" + str(k) + "_" + req + "_final")
 
             print("Best adaptation:                 " + str(customAdaptation[0:n_controllableFeatures]))
             print("Model confidence:                " + str(customConfidence))
@@ -145,34 +143,14 @@ if __name__ == '__main__':
         endTime = time.time()
         nsga3Time = endTime - startTime
 
-        """
-        print("\nPossible adaptations:")
-        print(res.X)
-
-        if res.X is not None:
-            print("\nModel confidence:")
-            xFull = np.c_[res.X, np.tile(constantFeatures, (res.X.shape[0], 1))]
-            print(model.predict_proba(xFull)[:, 1])
-
-        if res.X is not None:
-            print("\nScores:")
-            print(scores)
-            print("Best score: " + str(np.max(scores)))
-
-        print("\nNSGA3 execution time: " + str(nsga3Time) + " s")
-
-        if customTime != 0:
-            print("\nSpeed-up: " + str(nsga3Time / customTime) + "x")
-        """
-
         if res.X is not None:
             scores = [score(a) for a in res.X]
             nsga3Score = np.max(scores)
             nsga3AdaptationIndex = np.where(scores == nsga3Score)
-            nsga3Adaptation = res.X[nsga3AdaptationIndex][0]
-            nsga3Confidence = vecPredictProba(models, [np.append(nsga3Adaptation, externalFeatures)])
+            nsga3Adaptation = np.append(res.X[nsga3AdaptationIndex][0], externalFeatures)
+            nsga3Confidence = vecPredictProba(models, [nsga3Adaptation])[0]
 
-            print("Best NSGA3 adaptation:           " + str(nsga3Adaptation))
+            print("Best NSGA3 adaptation:           " + str(nsga3Adaptation[:n_controllableFeatures]))
             print("Model confidence:                " + str(nsga3Confidence))
             print("Adaptation score:                " + str(nsga3Score) + " / 400")
         else:
@@ -225,54 +203,3 @@ if __name__ == '__main__':
     if not os.path.exists(path):
         os.makedirs(path)
     results.to_csv(path + "/results.csv")
-
-    """
-    mod_dataset = X.to_numpy(copy=True)
-
-    for i in range(mod_dataset.shape[0]):
-        if y.iloc[i].bool:
-            print("Row: " + str(i))
-            constantFeatures = mod_dataset[i, 4:9]
-
-            res = nsga3(bestModel, constantFeatures, featureNames)
-
-            if res.X is not None:
-                mod_dataset[i, 0:4] = res.X[0]          #choose an option
-    """
-
-    """
-    couplesOfFeatures = []
-    featureToCycles = features.copy()
-    for f1 in features:
-        featureToCycles.remove(f1)
-        for f2 in featureToCycles:
-            couplesOfFeatures.append((f1, f2))   
-
-        path = '../plots/' + bestModel.__class__.__name__
-        if not os.path.exists(path): os.makedirs(path)
-        
-    for f in features:
-        path = '../plots/' + bestModel.__class__.__name__ + '/individuals'
-        if not os.path.exists(path): os.makedirs(path)
-        partial_dependence_plot(bestModel, X_train, [f], "both", path + '/' + f + '.png')
-    """
-    """
-    for c in couplesOfFeatures:
-        path = '../plots/' + bestModel.__class__.__name__ + '/couples'
-        if not os.path.exists(path): os.makedirs(path)
-        partial_dependence_plot(bestModel, X_train, [c], "average", path + '/' + c[0] + ' % ' + c[1] + '.png')
-    """
-
-    """
-    data_row = X_test.iloc[50]
-    local_exp = sort_variables_from_LIME(X_train, bestmodel, data_row, features)
-    print(local_exp)
-    """
-
-    """
-    os.chdir("../MDP_Dataset_Builder")
-    mod_dataset = X.to_numpy(copy=True)                         #.loc[0:10, :]. to test only part of the dataset
-    np.save("./starting_combinations.npy", mod_dataset)
-    os.system("execute.bat ./starting_combinations.npy")
-    os.system("merge_csvs.py")
-    """

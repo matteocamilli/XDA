@@ -54,4 +54,4 @@ class Adaptation(Problem):
         f4 = x[:, 3]
 
         out["F"] = [f1, f2, f3, f4]
-        out["G"] = [self.targetConfidence[0][i] - self.models[i].predict_proba(xFull)[:, 1] for i in range(self.n_constr)]
+        out["G"] = [self.targetConfidence[i] - self.models[i].predict_proba(xFull)[:, 1] for i in range(self.n_constr)]

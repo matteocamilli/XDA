@@ -75,7 +75,7 @@ class CustomPlanner:
                     domainIndex = i
                     minConfidenceLoss = confidenceLoss
 
-        # return if no feature can be improved
+        # return if no feature can be modified
         if featureIndex is None:
             return None, None
 
@@ -92,7 +92,7 @@ class CustomPlanner:
             newAdaptation[featureIndex] = featureMax
             excludedFeatures.append(featureIndex)
 
-        newConfidence = vecPredictProba(self.reqClassifiers, [newAdaptation])
+        newConfidence = vecPredictProba(self.reqClassifiers, [newAdaptation])[0]
 
         if (newConfidence < self.targetConfidence).any():
             newAdaptation = np.copy(adaptation)
@@ -121,15 +121,20 @@ class CustomPlanner:
                     newAdaptation[index] = featureMax
                     excludedFeatures.append(index)
 
-                newConfidence = vecPredictProba(self.reqClassifiers, [newAdaptation])
-                confidenceGain = np.sum(newConfidence - confidence)
+                newConfidence = vecPredictProba(self.reqClassifiers, [newAdaptation])[0]
+
+                confidenceGains = newConfidence - confidence
+                for j, c in enumerate(newConfidence):
+                    if confidenceGains[j] < 0 and c >= self.targetConfidence[j]:
+                        confidenceGains[j] = 0
+                confidenceGain = np.sum(confidenceGains)
 
                 if maxConfidenceGain is None or confidenceGain > maxConfidenceGain:
                     maxConfidenceGain = confidenceGain
                     bestAdaptation = np.copy(newAdaptation)
                     bestConfidence = np.copy(newConfidence)
 
-        # return if there is no trivial better adaptation
+        # return if no feature can be modified
         if maxConfidenceGain is None:
             return None, confidence
 
@@ -183,24 +188,28 @@ class CustomPlanner:
         print(confidence)
 
         # enhance solution
-        steps = 0
+        confidenceSteps = 0
+        scoreSteps = 0
+
+        # optimize confidence the adaptation is not valid
         excludedFeatures = []
-        if validAdaptationFound:
-            while len(excludedFeatures) < n_controllableFeatures:
-                adaptation, confidence = self.optimizeScoreStep(adaptation, confidence, excludedFeatures)
-                steps += 1
-        else:
+        if not validAdaptationFound:
             while adaptation is not None and (confidence < self.targetConfidence).any():
                 adaptation, confidence = self.optimizeConfidenceStep(adaptation, confidence, excludedFeatures)
-                steps += 1
+                print(confidence)
+                confidenceSteps += 1
 
-        print("Total steps: " + str(steps))
+        # then optimize score if the adaptation is valid
+        excludedFeatures = []
+        if adaptation is not None:
+            while len(excludedFeatures) < n_controllableFeatures:
+                adaptation, confidence = self.optimizeScoreStep(adaptation, confidence, excludedFeatures)
+                scoreSteps += 1
+
+        print("Confidence optimization steps: " + str(confidenceSteps))
+        print("Score optimization steps:      " + str(scoreSteps))
+        print("Total optimization steps:      " + str(confidenceSteps + scoreSteps))
 
         print(confidence)
-        """
-        if (confidence < self.targetConfidence).any():
-            adaptation = None
-            confidence = None
-        """
 
         return adaptation, confidence
