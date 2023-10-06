@@ -24,6 +24,7 @@ class Adaptation(Problem):
         out["F"] = [f1, f2, f3, f4]
         out["G"] = [self.targetConfidence[0][i] - self.models[i].predict_proba(xFull)[:, 1] for i in range(self.n_constr)]
 
+
 def nsga3(models, targetConfidence, constantFeatures):
     # create the reference directions to be used for the optimization
     ref_dirs = get_reference_directions("das-dennis", 4, n_partitions=12)
