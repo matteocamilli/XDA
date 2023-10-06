@@ -104,7 +104,7 @@ if __name__ == '__main__':
     testNum = 20
     for k in range(1, testNum + 1):
         random.seed()
-        rowIndex = k - 1  # random.randrange(0, X_train.shape[0])
+        rowIndex = 10 - 1  # random.randrange(0, X_train.shape[0])
         row = X_train.iloc[rowIndex, :].to_numpy()  # TODO use validation set instead of the training one
 
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)
