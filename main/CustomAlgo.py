@@ -138,14 +138,14 @@ class CustomPlanner:
         if maxConfidenceGain is None:
             return None, confidence
 
-        print("Confidence gain: " + str(maxConfidenceGain))
+        # print("Confidence gain: " + str(maxConfidenceGain))
         return bestAdaptation, bestConfidence
 
     def findAdaptation(self, row):
         n_controllableFeatures = len(self.controllableFeatureIndices)
 
         # find neighbors
-        print(self.knn.kneighbors([row], self.n_neighbors))
+        # print(self.knn.kneighbors([row], self.n_neighbors))
         neighbors = np.ravel(self.knn.kneighbors([row], self.n_neighbors, False))
 
         # starting solutions
@@ -162,8 +162,11 @@ class CustomPlanner:
 
         adaptationsConfidence = vecPredictProba(self.reqClassifiers, adaptations)
 
+        print("\nStarting adaptations:")
         print(adaptations[:, :n_controllableFeatures])
+        print("\nStarting adaptations confidence:")
         print(adaptationsConfidence)
+        print("\nStarting adaptations score:")
         print([self.scoreFunction(a) for a in adaptations])
 
         validAdaptationIndices = []
@@ -176,15 +179,36 @@ class CustomPlanner:
         validAdaptationFound = len(validAdaptations) > 0
 
         if validAdaptationFound:
-            bestAdaptationIndex = 0  # TODO use TA (the ranking algorithm) to get best adaptation based on confidence and score
+            def startingSolutionScore(a, c):
+                return self.scoreFunction(a) + np.sum(c - self.targetConfidence)
+
+            validAdaptationsScores = [startingSolutionScore(validAdaptations[i], validAdaptationsConfidence[i])
+                                      for i in range(len(validAdaptations))]
+            bestAdaptationIndex = np.where(np.max(validAdaptationsScores))[0][0]
+
+            print("\nStarting valid adaptations ranking")
+            print(validAdaptationsScores)
+            print("Best starting valid adaptation: " + str(bestAdaptationIndex))
+
             adaptation = validAdaptations[bestAdaptationIndex]
             confidence = validAdaptationsConfidence[bestAdaptationIndex]
         else:
-            bestAdaptationIndex = 0  # TODO use TA (the ranking algorithm) to get best adaptation based on confidence only
+            def startingSolutionScore(c):
+                return np.sum(c - self.targetConfidence)
+
+            adaptationsScores = [startingSolutionScore(adaptationsConfidence[i])
+                                 for i in range(len(adaptations))]
+            bestAdaptationIndex = np.where(np.max(adaptationsScores))[0][0]
+
+            print("\nStarting adaptations ranking")
+            print(adaptationsScores)
+            print("Best starting adaptation: " + str(bestAdaptationIndex))
+
             adaptation = adaptations[bestAdaptationIndex]
             confidence = adaptationsConfidence[bestAdaptationIndex]
 
         print(adaptation)
+        print("With confidence:")
         print(confidence)
 
         # enhance solution
@@ -196,7 +220,7 @@ class CustomPlanner:
         if not validAdaptationFound:
             while adaptation is not None and (confidence < self.targetConfidence).any():
                 adaptation, confidence = self.optimizeConfidenceStep(adaptation, confidence, excludedFeatures)
-                print(confidence)
+                # print(confidence)
                 confidenceSteps += 1
 
         # then optimize score if the adaptation is valid
@@ -206,10 +230,12 @@ class CustomPlanner:
                 adaptation, confidence = self.optimizeScoreStep(adaptation, confidence, excludedFeatures)
                 scoreSteps += 1
 
-        print("Confidence optimization steps: " + str(confidenceSteps))
+        print("\nConfidence optimization steps: " + str(confidenceSteps))
         print("Score optimization steps:      " + str(scoreSteps))
         print("Total optimization steps:      " + str(confidenceSteps + scoreSteps))
 
+        print("\nFinal confidence:")
         print(confidence)
+        print()
 
         return adaptation, confidence
