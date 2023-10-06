@@ -130,7 +130,7 @@ class CustomPlanner:
                     bestConfidence = np.copy(newConfidence)
 
         # return if there is no trivial better adaptation
-        if maxConfidenceGain < 0:
+        if maxConfidenceGain is None:
             return None, confidence
 
         print("Confidence gain: " + str(maxConfidenceGain))

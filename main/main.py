@@ -11,7 +11,7 @@ from model.ModelConstructor import constructModel
 import explainability_techniques.LIME as lime
 from CustomAlgo import CustomPlanner
 from CustomAlgo import vecPredictProba
-from genetic_algorithm.NSGA3 import nsga3
+from genetic_algorithm.NSGA3 import NSGA3Planner
 
 
 class Req:
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirections = [1, -1, -1, -1]
 
-    reqs = ["req_0"]#, "req_1", "req_2", "req_3"]
+    reqs = ["req_0", "req_1"]#, "req_2", "req_3"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
@@ -70,9 +70,11 @@ if __name__ == '__main__':
         print("=" * 100)
 
     controllableFeatureDomains = np.repeat([[0, 100]], n_controllableFeatures, 0)
-    planner = CustomPlanner(X_train, n_neighbors, models, targetConfidence,
-                            controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
-                            optimizationDirections, score, 1, "../plots")
+    customPlanner = CustomPlanner(X_train, n_neighbors, models, targetConfidence,
+                                  controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
+                                  optimizationDirections, score, 1, "../plots")
+
+    nsga3Planner = NSGA3Planner(models, targetConfidence)
 
     # create lime explainer
     limeExplainer = lime.createLimeExplainer(X)
@@ -104,8 +106,8 @@ if __name__ == '__main__':
     testNum = 20
     for k in range(1, testNum + 1):
         random.seed()
-        rowIndex = 10 - 1  # random.randrange(0, X_train.shape[0])
-        row = X_train.iloc[rowIndex, :].to_numpy()  # TODO use validation set instead of the training one
+        rowIndex = k - 1  # random.randrange(0, X_test.shape[0])
+        row = X_test.iloc[rowIndex, :].to_numpy()
 
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)
         print("Row " + str(rowIndex) + ":\n" + str(row))
@@ -115,7 +117,7 @@ if __name__ == '__main__':
             lime.saveExplanation(lime.explain(limeExplainer, models[i], row), path + req + "_starting")
 
         startTime = time.time()
-        customAdaptation, customConfidence = planner.findAdaptation(row)
+        customAdaptation, customConfidence = customPlanner.findAdaptation(row)
         endTime = time.time()
         customTime = endTime - startTime
 
@@ -139,7 +141,7 @@ if __name__ == '__main__':
         externalFeatures = row[n_controllableFeatures:]
 
         startTime = time.time()
-        res = nsga3(models, targetConfidence, externalFeatures)
+        res = nsga3Planner.findAdaptation(externalFeatures)
         endTime = time.time()
         nsga3Time = endTime - startTime
 
