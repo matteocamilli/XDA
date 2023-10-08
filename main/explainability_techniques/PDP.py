@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import sklearn.inspection as ins
 import copy
 
 
 def partialDependencePlot(model, X_train, features, kind, path=None):
-    pdp = ins.PartialDependenceDisplay.from_estimator(model, X_train, features, kind=kind)
+    pdp = ins.PartialDependenceDisplay.from_estimator(model, X_train, features, kind=kind, percentiles=[0, 1])
     plt.tight_layout()
     if path is not None:
         plt.savefig(path)
@@ -28,22 +29,33 @@ def multiplyPdps(pdps, path=None):
     return res
 
 
-def getMaxPointOfLine(pdp, lineIndex):
+def getMaximalsOfLine(pdp, lineIndex):
     if lineIndex >= 0:
         yVals = pdp.pd_results[0]["individual"][0][lineIndex, :]
     else:
         yVals = pdp.pd_results[0]["average"][0, :]
     xVals = pdp.pd_results[0]["values"][0]
 
-    maxIndex = 0
-    while yVals[maxIndex] != yVals.max():
-        maxIndex += 1
+    maxX = xVals[np.where(yVals == yVals.max())]
 
-    return xVals[maxIndex]
+    return maxX
 
 
-def getMaxPointOfMeanLine(pdp):
-    return getMaxPointOfLine(pdp, -1)
+def getMaxOfLine(pdp, lineIndex):
+    if lineIndex >= 0:
+        yVals = pdp.pd_results[0]["individual"][0][lineIndex, :]
+    else:
+        yVals = pdp.pd_results[0]["average"][0, :]
+
+    return yVals.max()
+
+
+def getMaximalsOfMeanLine(pdp):
+    return getMaximalsOfLine(pdp, -1)
+
+
+def getMaxOfMeanLine(pdp):
+    return getMaxOfLine(pdp, -1)
 
 
 def getSlope(pdp, x, lineIndex):

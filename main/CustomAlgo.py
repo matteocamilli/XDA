@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import explainability_techniques.LIME as lime
 import explainability_techniques.PDP as pdp
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -36,17 +37,20 @@ class CustomPlanner:
         knn.fit(X, np.zeros((X.shape[0], 1)))
         self.knn = knn
 
+        # create lime explainer
+        self.limeExplainer = lime.createLimeExplainer(X)
+
         # make pdps
-        pdps = {}
+        self.pdps = {}
         for i, feature in enumerate(controllableFeaturesNames):
-            pdps[i] = []
+            self.pdps[i] = []
             for j, reqClassifier in enumerate(reqClassifiers):
                 path = None
                 if plotsPath is not None:
                     path = plotsPath + "/req_" + str(j)
                     if not os.path.exists(path):
                         os.makedirs(path)
-                pdps[i].append(pdp.partialDependencePlot(reqClassifier, X, [feature], "both", path + "/" + feature + ".png"))
+                self.pdps[i].append(pdp.partialDependencePlot(reqClassifier, X, [feature], "both", path + "/" + feature + ".png"))
 
         # make summary pdps
         self.summaryPdps = []
@@ -56,14 +60,12 @@ class CustomPlanner:
                 path = plotsPath + "/summary"
                 if not os.path.exists(path):
                     os.makedirs(path)
-            self.summaryPdps.append(pdp.multiplyPdps(pdps[i], path + "/" + feature + ".png"))
+            self.summaryPdps.append(pdp.multiplyPdps(self.pdps[i], path + "/" + feature + ".png"))
 
     def optimizeScoreStep(self, adaptation, confidence, excludedFeatures):
-        newAdaptation = np.copy(adaptation)
-
         # select a feature to modify
         featureIndex = None
-        domainIndex = None
+        controllableIndex = None
         minConfidenceLoss = None
         for i, index in enumerate(self.controllableFeatureIndices):
             if index not in excludedFeatures:
@@ -72,7 +74,7 @@ class CustomPlanner:
                 confidenceLoss = slope * self.optimizationDirections[i]
                 if minConfidenceLoss is None or confidenceLoss < minConfidenceLoss:
                     featureIndex = index
-                    domainIndex = i
+                    controllableIndex = i
                     minConfidenceLoss = confidenceLoss
 
         # return if no feature can be modified
@@ -80,10 +82,11 @@ class CustomPlanner:
             return None, None
 
         # modify the selected feature
-        newAdaptation[featureIndex] += self.optimizationDirections[featureIndex] * self.delta
+        newAdaptation = np.copy(adaptation)
+        newAdaptation[featureIndex] += self.optimizationDirections[controllableIndex] * self.delta
 
-        featureMin = self.controllableFeatureDomains[domainIndex, 0]
-        featureMax = self.controllableFeatureDomains[domainIndex, 1]
+        featureMin = self.controllableFeatureDomains[controllableIndex, 0]
+        featureMax = self.controllableFeatureDomains[controllableIndex, 1]
 
         if newAdaptation[featureIndex] < featureMin:
             newAdaptation[featureIndex] = featureMin
@@ -102,44 +105,40 @@ class CustomPlanner:
         return newAdaptation, newConfidence
 
     def optimizeConfidenceStep(self, adaptation, confidence, excludedFeatures):
-        # search a better adaptation in the neighbourhood of the old one
-        bestAdaptation = None
-        bestConfidence = None
-        maxConfidenceGain = None
-        for i, index in enumerate(self.controllableFeatureIndices):
-            if index not in excludedFeatures:
-                newAdaptation = np.copy(adaptation)
-                newAdaptation[index] -= self.optimizationDirections[index] * self.delta
+        # find the most critical requirement
+        criticalReq = np.where(confidence == np.min(confidence[np.where(confidence < self.targetConfidence)]))[0][0]
 
-                featureMin = self.controllableFeatureDomains[i, 0]
-                featureMax = self.controllableFeatureDomains[i, 1]
+        neighborIndex = np.ravel(self.knn.kneighbors([adaptation], 1, False))[0]
+        print(neighborIndex)
 
-                if newAdaptation[index] < featureMin:
-                    newAdaptation[index] = featureMin
-                    excludedFeatures.append(index)
-                elif newAdaptation[index] > featureMax:
-                    newAdaptation[index] = featureMax
-                    excludedFeatures.append(index)
+        maxPoints = np.array([pdp.getMaximalsOfLine(self.pdps[criticalReq][i], neighborIndex)
+                              for i in range(len(self.controllableFeatureIndices))])
 
-                newConfidence = vecPredictProba(self.reqClassifiers, [newAdaptation])[0]
+        usefulMaxPointsIndices = []
+        for i, p in enumerate(maxPoints):
+            featureIndex = self.controllableFeatureIndices[i]
+            if featureIndex not in excludedFeatures and p != adaptation[featureIndex]:
+                usefulMaxPointsIndices.append(i)
 
-                confidenceGains = newConfidence - confidence
-                for j, c in enumerate(newConfidence):
-                    if confidenceGains[j] < 0 and c >= self.targetConfidence[j]:
-                        confidenceGains[j] = 0
-                confidenceGain = np.sum(confidenceGains)
-
-                if maxConfidenceGain is None or confidenceGain > maxConfidenceGain:
-                    maxConfidenceGain = confidenceGain
-                    bestAdaptation = np.copy(newAdaptation)
-                    bestConfidence = np.copy(newConfidence)
-
-        # return if no feature can be modified
-        if maxConfidenceGain is None:
+        if len(usefulMaxPointsIndices) == 0:
             return None, confidence
 
-        # print("Confidence gain: " + str(maxConfidenceGain))
-        return bestAdaptation, bestConfidence
+        controllableIndex = usefulMaxPointsIndices[np.argmax(maxPoints[usefulMaxPointsIndices])]
+        maxPoint = maxPoints[controllableIndex]
+
+        featureIndex = self.controllableFeatureIndices[controllableIndex]
+        newAdaptation = np.copy(adaptation)
+        newAdaptation[featureIndex] = maxPoint
+        #excludedFeatures.append(featureIndex)
+
+        newConfidence = vecPredictProba(self.reqClassifiers, [newAdaptation])[0]
+
+        # return if no feature can be modified
+        if newAdaptation is None:
+            return None, confidence
+
+        print("Confidence gain: " + str(newConfidence - confidence))
+        return newAdaptation, newConfidence
 
     def findAdaptation(self, row):
         n_controllableFeatures = len(self.controllableFeatureIndices)
@@ -154,11 +153,90 @@ class CustomPlanner:
             neighborIndex = neighbors[i]
             adaptation = np.copy(row)
 
-            for j, index in enumerate(self.controllableFeatureIndices):
-                adaptation[index] = pdp.getMaxPointOfLine(self.summaryPdps[j], neighborIndex)
-                neighborIndex = np.ravel(self.knn.kneighbors([adaptation], 1, False))[0]
+            excludedFeatures = []
+            while len(excludedFeatures) < n_controllableFeatures:
+                # recalculate neighbor after the first step
+                if len(excludedFeatures) > 0:
+                    neighborIndex = np.ravel(self.knn.kneighbors([adaptation], 1, False))[0]
+
+                maxYVals = [pdp.getMaxOfLine(self.summaryPdps[j], neighborIndex) for j in range(n_controllableFeatures)]
+
+                maxY = 0
+                index = 0
+                for j, y in enumerate(maxYVals):
+                    if y > maxY:
+                        maxY = y
+                        index = j
+                excludedFeatures.append(index)
+
+                maximals = pdp.getMaximalsOfLine(self.summaryPdps[index], neighborIndex)
+                if self.optimizationDirections[index] == -1:
+                    # leftmost maximal
+                    x = maximals[0]
+                else:
+                    # rightmost maximal
+                    x = maximals[len(maximals) - 1]
+
+                adaptation[self.controllableFeatureIndices[index]] = x
 
             adaptations[i] = adaptation
+
+        # remove duplicate solutions
+        adaptations = np.unique(adaptations, axis=0)
+
+        for adaptation in adaptations:
+            neighborIndex = np.ravel(self.knn.kneighbors([adaptation], 1, False))[0]
+
+            maximals = [pdp.getMaximalsOfLine(self.summaryPdps[i], neighborIndex) for i in
+                        range(n_controllableFeatures)]
+
+            """
+            possibilities = np.array([[maximals[0][i], maximals[1][j], maximals[2][k], maximals[3][n]]
+                                      for i in range(len(maximals[0]))
+                                      for j in range(len(maximals[1]))
+                                      for k in range(len(maximals[2]))
+                                      for n in range(len(maximals[3]))])
+            print(len(possibilities))
+            p = vecPredictProba(self.reqClassifiers,
+                                np.append(possibilities,
+                                          np.repeat([row[n_controllableFeatures:]], possibilities.shape[0], axis=0),
+                                          axis=1))
+            print(np.max(p))
+            """
+
+            # this should do the magic in most cases,
+            # but there could be better solutions not taken into account (see above)
+            # we can consider to evaluate more possible solutions
+            firstMaximals = []
+            for i in range(n_controllableFeatures):
+                firstMaximals.append((i, maximals[i][0]))
+
+            additionalAdaptations = []
+
+            def genAdditionalAdaptations(maximals):
+                if len(maximals) == 0:
+                    return
+                for i, m in enumerate(maximals):
+                    additionalAdaptation = np.copy(adaptation)
+                    additionalAdaptation[self.controllableFeatureIndices[int(m[0])]] = m[1]
+                    additionalAdaptations.append(additionalAdaptation)
+                    newMaximals = maximals.copy()
+                    newMaximals.remove(m)
+                    genAdditionalAdaptations(newMaximals)
+
+            genAdditionalAdaptations(firstMaximals)
+
+            """
+            print("\nAdditional adaptations:")
+            print(np.array(additionalAdaptations)[:, :n_controllableFeatures])
+            print("\nAdditional adaptations confidence:")
+            print(vecPredictProba(self.reqClassifiers, additionalAdaptations))
+            """
+
+            adaptations = np.append(adaptations, additionalAdaptations, axis=0)
+
+        # remove duplicate solutions again
+        adaptations = np.unique(adaptations, axis=0)
 
         adaptationsConfidence = vecPredictProba(self.reqClassifiers, adaptations)
 
@@ -184,7 +262,7 @@ class CustomPlanner:
 
             validAdaptationsScores = [startingSolutionScore(validAdaptations[i], validAdaptationsConfidence[i])
                                       for i in range(len(validAdaptations))]
-            bestAdaptationIndex = np.where(np.max(validAdaptationsScores))[0][0]
+            bestAdaptationIndex = np.argmax(validAdaptationsScores)
 
             print("\nStarting valid adaptations ranking")
             print(validAdaptationsScores)
@@ -198,7 +276,7 @@ class CustomPlanner:
 
             adaptationsScores = [startingSolutionScore(adaptationsConfidence[i])
                                  for i in range(len(adaptations))]
-            bestAdaptationIndex = np.where(np.max(adaptationsScores))[0][0]
+            bestAdaptationIndex = np.argmax(adaptationsScores)
 
             print("\nStarting adaptations ranking")
             print(adaptationsScores)
@@ -218,10 +296,15 @@ class CustomPlanner:
         # optimize confidence the adaptation is not valid
         excludedFeatures = []
         if not validAdaptationFound:
+            adaptation = None
+            """
             while adaptation is not None and (confidence < self.targetConfidence).any():
                 adaptation, confidence = self.optimizeConfidenceStep(adaptation, confidence, excludedFeatures)
-                # print(confidence)
+                if adaptation is not None: print(adaptation[:n_controllableFeatures])
+                print(confidence)
+                print()
                 confidenceSteps += 1
+            """
 
         # then optimize score if the adaptation is valid
         excludedFeatures = []

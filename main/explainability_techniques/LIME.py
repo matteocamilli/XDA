@@ -13,9 +13,9 @@ def createLimeExplainer(X_train):
     return explainer
 
 
-def explain(explainer, model, data_row):
+def explain(explainer, model, row):
     exp = explainer.explain_instance(
-        data_row,
+        row,
         predict_fn=model.predict_proba
     )
 

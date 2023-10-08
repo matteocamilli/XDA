@@ -48,7 +48,7 @@ if __name__ == '__main__':
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirections = [1, -1, -1, -1]
 
-    reqs = ["req_0", "req_1", "req_2", "req_3"]
+    reqs = ["req_0"]#, "req_1", "req_2", "req_3"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
@@ -81,7 +81,7 @@ if __name__ == '__main__':
     nsga3Planner = NSGA3Planner(models, targetConfidence)
 
     # create lime explainer
-    limeExplainer = lime.createLimeExplainer(X)
+    limeExplainer = lime.createLimeExplainer(X_train)
 
     # metrics
     meanCustomScore = 0
@@ -101,10 +101,10 @@ if __name__ == '__main__':
     for f in files:
         os.remove(f)
 
-    testNum = 200
+    testNum = 20
     for k in range(1, testNum + 1):
         random.seed()
-        rowIndex = random.randrange(0, X_test.shape[0])
+        rowIndex = 32 + k - 1  # random.randrange(0, X_test.shape[0])
         row = X_test.iloc[rowIndex, :].to_numpy()
 
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)
