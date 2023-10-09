@@ -101,10 +101,10 @@ if __name__ == '__main__':
     for f in files:
         os.remove(f)
 
-    testNum = 20
+    testNum = 200
     for k in range(1, testNum + 1):
         random.seed()
-        rowIndex = 32 + k - 1  # random.randrange(0, X_test.shape[0])
+        rowIndex = k - 1  # random.randrange(0, X_test.shape[0])
         row = X_test.iloc[rowIndex, :].to_numpy()
 
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)

@@ -190,19 +190,24 @@ class CustomPlanner:
             maximals = [pdp.getMaximalsOfLine(self.summaryPdps[i], neighborIndex) for i in
                         range(n_controllableFeatures)]
 
-            """
             possibilities = np.array([[maximals[0][i], maximals[1][j], maximals[2][k], maximals[3][n]]
                                       for i in range(len(maximals[0]))
                                       for j in range(len(maximals[1]))
                                       for k in range(len(maximals[2]))
                                       for n in range(len(maximals[3]))])
+
             print(len(possibilities))
+            """
             p = vecPredictProba(self.reqClassifiers,
                                 np.append(possibilities,
                                           np.repeat([row[n_controllableFeatures:]], possibilities.shape[0], axis=0),
                                           axis=1))
             print(np.max(p))
             """
+
+            adaptations = np.append(adaptations, np.append(possibilities,
+                      np.repeat([row[n_controllableFeatures:]], possibilities.shape[0], axis=0),
+                      axis=1), axis=0)
 
             # this should do the magic in most cases,
             # but there could be better solutions not taken into account (see above)
@@ -224,7 +229,7 @@ class CustomPlanner:
                     newMaximals.remove(m)
                     genAdditionalAdaptations(newMaximals)
 
-            genAdditionalAdaptations(firstMaximals)
+            # genAdditionalAdaptations(firstMaximals)
 
             """
             print("\nAdditional adaptations:")
@@ -233,19 +238,21 @@ class CustomPlanner:
             print(vecPredictProba(self.reqClassifiers, additionalAdaptations))
             """
 
-            adaptations = np.append(adaptations, additionalAdaptations, axis=0)
+            # adaptations = np.append(adaptations, additionalAdaptations, axis=0)
 
         # remove duplicate solutions again
         adaptations = np.unique(adaptations, axis=0)
 
         adaptationsConfidence = vecPredictProba(self.reqClassifiers, adaptations)
 
+        """
         print("\nStarting adaptations:")
         print(adaptations[:, :n_controllableFeatures])
         print("\nStarting adaptations confidence:")
         print(adaptationsConfidence)
         print("\nStarting adaptations score:")
         print([self.scoreFunction(a) for a in adaptations])
+        """
 
         validAdaptationIndices = []
         for i, confidence in enumerate(adaptationsConfidence):
@@ -264,8 +271,10 @@ class CustomPlanner:
                                       for i in range(len(validAdaptations))]
             bestAdaptationIndex = np.argmax(validAdaptationsScores)
 
+            """
             print("\nStarting valid adaptations ranking")
             print(validAdaptationsScores)
+            """
             print("Best starting valid adaptation: " + str(bestAdaptationIndex))
 
             adaptation = validAdaptations[bestAdaptationIndex]
@@ -278,14 +287,16 @@ class CustomPlanner:
                                  for i in range(len(adaptations))]
             bestAdaptationIndex = np.argmax(adaptationsScores)
 
+            """
             print("\nStarting adaptations ranking")
             print(adaptationsScores)
+            """
             print("Best starting adaptation: " + str(bestAdaptationIndex))
 
             adaptation = adaptations[bestAdaptationIndex]
             confidence = adaptationsConfidence[bestAdaptationIndex]
 
-        print(adaptation)
+        print(adaptation[:n_controllableFeatures])
         print("With confidence:")
         print(confidence)
 
