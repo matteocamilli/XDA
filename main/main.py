@@ -10,17 +10,18 @@ from colorama import Fore, Style
 from sklearn.model_selection import train_test_split
 from model.ModelConstructor import constructModel
 import explainability_techniques.LIME as lime
-from CustomAlgo import CustomPlanner
-from CustomAlgo import vecPredictProba
-from genetic_algorithm.NSGA3 import NSGA3Planner
+from CustomPlanner import CustomPlanner
+from NSGA3Planner import NSGA3Planner
+from util import vecPredictProba
 
 
-class Req:
-    def __init__(self, name):
-        self.name = name
+# provided success score function (based on the signed distance with respect to the target success probabilities)
+def successScore(adaptation, reqClassifiers, targetSuccessProba):
+    return np.sum(vecPredictProba(reqClassifiers, [adaptation])[0] - targetSuccessProba)
 
 
-def score(adaptation):
+# provided optimization score function (based on the ideal controllable feature assignment)
+def optimizationScore(adaptation):
     return 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
 
 
@@ -48,7 +49,7 @@ if __name__ == '__main__':
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirections = [1, -1, -1, -1]
 
-    reqs = ["req_0"]#, "req_1", "req_2", "req_3"]
+    reqs = ["req_1"]#, "req_1", "req_2", "req_3"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
@@ -74,11 +75,13 @@ if __name__ == '__main__':
         print("=" * 100)
 
     controllableFeatureDomains = np.repeat([[0, 100]], n_controllableFeatures, 0)
+
+    # initialize planners
     customPlanner = CustomPlanner(X_train, n_neighbors, models, targetConfidence,
                                   controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
-                                  optimizationDirections, score, 1, "../plots")
+                                  optimizationDirections, successScore, optimizationScore, 1, "../plots")
 
-    nsga3Planner = NSGA3Planner(models, targetConfidence)
+    nsga3Planner = NSGA3Planner(models, targetConfidence, successScore, optimizationScore)
 
     # create lime explainer
     limeExplainer = lime.createLimeExplainer(X_train)
@@ -116,13 +119,11 @@ if __name__ == '__main__':
                                  path + "/" + str(k) + "_" + req + "_starting")
 
         startTime = time.time()
-        customAdaptation, customConfidence = customPlanner.findAdaptation(row)
+        customAdaptation, customConfidence, customScore = customPlanner.findAdaptation(row)
         endTime = time.time()
         customTime = endTime - startTime
 
         if customAdaptation is not None:
-            customScore = score(customAdaptation)
-
             for i, req in enumerate(reqs):
                 lime.saveExplanation(lime.explain(limeExplainer, models[i], customAdaptation),
                                      path + "/" + str(k) + "_" + req + "_final")
@@ -141,26 +142,13 @@ if __name__ == '__main__':
         externalFeatures = row[n_controllableFeatures:]
 
         startTime = time.time()
-        res = nsga3Planner.findAdaptation(externalFeatures)
+        nsga3Adaptation, nsga3Confidence, nsga3Score = nsga3Planner.findAdaptation(externalFeatures)
         endTime = time.time()
         nsga3Time = endTime - startTime
 
-        if res.X is not None:
-            scores = [score(a) for a in res.X]
-            nsga3Score = np.max(scores)
-            nsga3AdaptationIndex = np.where(scores == nsga3Score)
-            nsga3Adaptation = np.append(res.X[nsga3AdaptationIndex][0], externalFeatures)
-            nsga3Confidence = vecPredictProba(models, [nsga3Adaptation])[0]
-
-            print("Best NSGA3 adaptation:           " + str(nsga3Adaptation[:n_controllableFeatures]))
-            print("Model confidence:                " + str(nsga3Confidence))
-            print("Adaptation score:                " + str(nsga3Score) + " / 400")
-        else:
-            print("No adaptation found")
-            nsga3Adaptation = None
-            nsga3Confidence = None
-            nsga3Score = None
-
+        print("Best NSGA3 adaptation:           " + str(nsga3Adaptation[:n_controllableFeatures]))
+        print("Model confidence:                " + str(nsga3Confidence))
+        print("Adaptation score:                " + str(nsga3Score) + " / 400")
         print("NSGA3 execution time:            " + str(nsga3Time) + " s")
 
         print("-" * 100)

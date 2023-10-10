@@ -1,17 +1,8 @@
 import os
 import numpy as np
-import explainability_techniques.LIME as lime
 import explainability_techniques.PDP as pdp
 from sklearn.neighbors import KNeighborsClassifier
-
-
-def vecPredictProba(models, X):
-    probas = []
-    for model in models:
-        probas.append(model.predict_proba(X))
-    probas = np.ravel(probas)[1::2]
-    probas = np.column_stack(np.split(probas, len(models)))
-    return probas
+from util import vecPredictProba
 
 
 class CustomPlanner:
@@ -21,7 +12,9 @@ class CustomPlanner:
                  controllableFeatureIndices,
                  controllableFeatureDomains,
                  optimizationDirections,
-                 scoreFunction, delta=1, plotsPath=None):
+                 successScoreFunction,
+                 optimizationScoreFunction,
+                 delta=1, plotsPath=None):
 
         self.n_neighbors = n_neighbors
         self.reqClassifiers = reqClassifiers
@@ -29,16 +22,14 @@ class CustomPlanner:
         self.controllableFeatureIndices = np.array(controllableFeatureIndices)
         self.controllableFeatureDomains = controllableFeatureDomains
         self.optimizationDirections = optimizationDirections
-        self.scoreFunction = scoreFunction
+        self.successScoreFunction = successScoreFunction
+        self.optimizationScoreFunction = optimizationScoreFunction
         self.delta = delta
 
         # train a k nearest neighbors classifier only used to find the neighbors of a sample in the dataset
         knn = KNeighborsClassifier()
         knn.fit(X, np.zeros((X.shape[0], 1)))
         self.knn = knn
-
-        # create lime explainer
-        self.limeExplainer = lime.createLimeExplainer(X)
 
         # make pdps
         self.pdps = {}
@@ -144,42 +135,41 @@ class CustomPlanner:
         n_controllableFeatures = len(self.controllableFeatureIndices)
 
         # find neighbors
-        # print(self.knn.kneighbors([row], self.n_neighbors))
         neighbors = np.ravel(self.knn.kneighbors([row], self.n_neighbors, False))
 
         # starting solutions
-        adaptations = np.empty((self.n_neighbors, len(row)))
+        adaptations = [row]
         for i in range(self.n_neighbors):
             neighborIndex = neighbors[i]
             adaptation = np.copy(row)
 
+            recalculateNeighbor = False
             excludedFeatures = []
             while len(excludedFeatures) < n_controllableFeatures:
                 # recalculate neighbor after the first step
-                if len(excludedFeatures) > 0:
+                if recalculateNeighbor:
                     neighborIndex = np.ravel(self.knn.kneighbors([adaptation], 1, False))[0]
+                recalculateNeighbor = True
 
-                maxYVals = [pdp.getMaxOfLine(self.summaryPdps[j], neighborIndex) for j in range(n_controllableFeatures)]
+                maxYVals = [(j, pdp.getMaxOfLine(self.summaryPdps[j], neighborIndex)) for j in range(n_controllableFeatures)]
+                maxYVals = sorted(maxYVals, key=lambda val: val[1], reverse=True)
 
-                maxY = 0
-                index = 0
-                for j, y in enumerate(maxYVals):
-                    if y > maxY:
-                        maxY = y
-                        index = j
-                excludedFeatures.append(index)
+                for val in maxYVals:
+                    controllableIndex = val[0]
+                    if controllableIndex not in excludedFeatures:
+                        maximals = pdp.getMaximalsOfLine(self.summaryPdps[controllableIndex], neighborIndex)
+                        if self.optimizationDirections[controllableIndex] == -1:
+                            # leftmost maximal
+                            x = maximals[0]
+                        else:
+                            # rightmost maximal
+                            x = maximals[len(maximals) - 1]
 
-                maximals = pdp.getMaximalsOfLine(self.summaryPdps[index], neighborIndex)
-                if self.optimizationDirections[index] == -1:
-                    # leftmost maximal
-                    x = maximals[0]
-                else:
-                    # rightmost maximal
-                    x = maximals[len(maximals) - 1]
-
-                adaptation[self.controllableFeatureIndices[index]] = x
-
-            adaptations[i] = adaptation
+                        newAdaptation = np.copy(adaptation)
+                        newAdaptation[self.controllableFeatureIndices[controllableIndex]] = x
+                        adaptations.append(newAdaptation)
+                        excludedFeatures.append(controllableIndex)
+                        break
 
         # remove duplicate solutions
         adaptations = np.unique(adaptations, axis=0)
@@ -265,7 +255,7 @@ class CustomPlanner:
 
         if validAdaptationFound:
             def startingSolutionScore(a, c):
-                return self.scoreFunction(a) + np.sum(c - self.targetConfidence)
+                return self.optimizationScoreFunction(a) + np.sum(c - self.targetConfidence)
 
             validAdaptationsScores = [startingSolutionScore(validAdaptations[i], validAdaptationsConfidence[i])
                                       for i in range(len(validAdaptations))]
@@ -307,7 +297,7 @@ class CustomPlanner:
         # optimize confidence the adaptation is not valid
         excludedFeatures = []
         if not validAdaptationFound:
-            adaptation = None
+            # adaptation = None
             """
             while adaptation is not None and (confidence < self.targetConfidence).any():
                 adaptation, confidence = self.optimizeConfidenceStep(adaptation, confidence, excludedFeatures)
@@ -332,4 +322,4 @@ class CustomPlanner:
         print(confidence)
         print()
 
-        return adaptation, confidence
+        return adaptation, confidence, self.optimizationScoreFunction(adaptation)

@@ -5,10 +5,16 @@ from pymoo.optimize import minimize
 from pymoo.util.ref_dirs import get_reference_directions
 from pymoo.termination.default import DefaultMultiObjectiveTermination
 from pymoo.visualization.scatter import Scatter
+from util import vecPredictProba
 
 
 class NSGA3Planner:
-    def __init__(self, models, targetConfidence):
+    def __init__(self, reqClassifiers, targetConfidence, successScoreFunction, optimizationScoreFunction):
+        self.reqClassifiers = reqClassifiers
+        self.targetConfidence = targetConfidence
+        self.successScoreFunction = successScoreFunction
+        self.optimizationScoreFunction = optimizationScoreFunction
+
         # create the reference directions to be used for the optimization
         ref_dirs = get_reference_directions("das-dennis", 4, n_partitions=12)
 
@@ -22,7 +28,7 @@ class NSGA3Planner:
         )
 
         # create problem instance
-        self.problem = Adaptation(models, targetConfidence, [])
+        self.problem = Adaptation(reqClassifiers, targetConfidence, [])
 
     def findAdaptation(self, externalFeatures):
         # set problem
@@ -36,7 +42,25 @@ class NSGA3Planner:
 
         # Scatter().add(res.F).show()
 
-        return res
+        if res.X is not None:
+            adaptations = res.X
+        else:
+            adaptations = np.array([individual.X for individual in res.pop])
+
+        adaptations = np.append(adaptations, np.repeat([externalFeatures], adaptations.shape[0], axis=0), axis=1)
+        optimizationScores = [self.optimizationScoreFunction(a) for a in adaptations]
+
+        if res.X is not None:
+            adaptationIndex = np.argmax(optimizationScores)
+        else:
+            successScores = [self.successScoreFunction(a, self.reqClassifiers, self.targetConfidence) for a in adaptations]
+            adaptationIndex = np.argmax(successScores)
+
+        adaptation = adaptations[adaptationIndex]
+        confidence = vecPredictProba(self.reqClassifiers, [adaptation])[0]
+        score = self.optimizationScoreFunction(adaptation)
+
+        return adaptation, confidence, score
 
 
 class Adaptation(Problem):
