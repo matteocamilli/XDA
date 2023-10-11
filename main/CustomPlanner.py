@@ -7,23 +7,22 @@ from util import cartesian_product
 
 
 class CustomPlanner:
-    def __init__(self, X, n_neighbors,
+    def __init__(self, X, n_neighbors, n_startingSolutions,
                  reqClassifiers, targetConfidence,
                  controllableFeaturesNames,
                  controllableFeatureIndices,
                  controllableFeatureDomains,
                  optimizationDirections,
-                 successScoreFunction,
                  optimizationScoreFunction,
                  delta=1, plotsPath=None):
 
         self.n_neighbors = n_neighbors
+        self.n_startingSolutions = n_startingSolutions
         self.reqClassifiers = reqClassifiers
         self.targetConfidence = targetConfidence
         self.controllableFeatureIndices = np.array(controllableFeatureIndices)
         self.controllableFeatureDomains = controllableFeatureDomains
         self.optimizationDirections = optimizationDirections
-        self.successScoreFunction = successScoreFunction
         self.optimizationScoreFunction = optimizationScoreFunction
         self.delta = delta
 
@@ -54,13 +53,13 @@ class CustomPlanner:
                     os.makedirs(path)
             self.summaryPdps.append(pdp.multiplyPdps(self.pdps[i], path + "/" + feature + ".png"))
 
-    def optimizeScoreStep(self, adaptation, confidence, excludedFeatures):
+    def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, excludedFeatures, tempExcludedFeatures):
         # select a feature to modify
         featureIndex = None
         controllableIndex = None
         minConfidenceLoss = None
         for i, index in enumerate(self.controllableFeatureIndices):
-            if index not in excludedFeatures:
+            if index not in excludedFeatures and index not in tempExcludedFeatures:
                 neighborIndex = np.ravel(self.knn.kneighbors([adaptation], 1, False))[0]
                 slope = pdp.getSlope(self.summaryPdps[i], adaptation[index], neighborIndex)
                 confidenceLoss = slope * self.optimizationDirections[i]
@@ -89,16 +88,18 @@ class CustomPlanner:
 
         newConfidence = vecPredictProba(self.reqClassifiers, [newAdaptation])[0]
 
-        if (newConfidence < self.targetConfidence).any():
+        if (isValidAdaptation and (newConfidence < self.targetConfidence).any()) \
+                or (not isValidAdaptation and (newConfidence < confidence).any()):
             newAdaptation = np.copy(adaptation)
             newConfidence = np.copy(confidence)
-            excludedFeatures.append(featureIndex)
+            tempExcludedFeatures.append(featureIndex)
+        else:
+            tempExcludedFeatures.clear()
 
         return newAdaptation, newConfidence
 
     def findAdaptation(self, row):
         n_controllableFeatures = len(self.controllableFeatureIndices)
-        n_startingSolutions = 10
 
         # find neighbors
         neighbors = np.ravel(self.knn.kneighbors([row], self.n_neighbors, False))
@@ -189,77 +190,98 @@ class CustomPlanner:
         validAdaptationsConfidence = adaptationsConfidence[validAdaptationIndices]
         validAdaptationFound = len(validAdaptations) > 0
 
-        if validAdaptationFound:
-            def solutionScore(a, c):
-                return self.optimizationScoreFunction(a) + np.sum(c - self.targetConfidence)
+        if validAdaptationFound and len(validAdaptations) > self.n_startingSolutions:
+            # pick the best n solutions:
+            # rank solutions based on success proba and score
+            def solutionRank(a, c):
+                return (self.optimizationScoreFunction(a) +
+                        np.sum(c - self.targetConfidence) / np.sum(np.ravel(np.ones((1, len(self.reqClassifiers)))) - self.targetConfidence) * 100)
 
-            validAdaptationsScores = [solutionScore(validAdaptations[i], validAdaptationsConfidence[i])
-                                      for i in range(len(validAdaptations))]
-            bestAdaptationIndices = np.argpartition(validAdaptationsScores, -n_startingSolutions)[-n_startingSolutions:]
+            validAdaptationsRanks = [solutionRank(validAdaptations[i], validAdaptationsConfidence[i])
+                                     for i in range(len(validAdaptations))]
 
-            """
-            print("\nStarting valid adaptations ranking")
-            print(validAdaptationsScores)
-            """
-            print("Best starting valid adaptations: " + str(bestAdaptationIndices))
-
+            bestAdaptationIndices = np.argpartition(validAdaptationsRanks, -self.n_startingSolutions)[-self.n_startingSolutions:]
             bestAdaptations = validAdaptations[bestAdaptationIndices]
             bestAdaptationsConfidence = validAdaptationsConfidence[bestAdaptationIndices]
+
+            """
+            print("\nStarting valid adaptations ranking:")
+            print(validAdaptationsRanks)
+            """
+            print("Best starting valid adaptations: " + str(bestAdaptationIndices))
+        elif validAdaptationFound:
+            # just keep the starting adaptations
+            bestAdaptations = validAdaptations
+            bestAdaptationsConfidence = validAdaptationsConfidence
+            print("Starting valid adaptations:")
         else:
-            def solutionScore(c):
+            # no valid adaptation found, so:
+            # rank solutions based on success proba only
+            def solutionRank(c):
                 return np.sum(c - self.targetConfidence)
 
-            adaptationsScores = [solutionScore(adaptationsConfidence[i])
-                                 for i in range(len(adaptations))]
-            bestAdaptationIndices = np.argpartition(adaptationsScores, -n_startingSolutions)[-n_startingSolutions:]
+            adaptationsRanks = [solutionRank(adaptationsConfidence[i]) for i in range(len(adaptations))]
 
-            """
-            print("\nStarting adaptations ranking")
-            print(adaptationsScores)
-            """
-            print("Best starting adaptations: " + str(bestAdaptationIndices))
-
+            # pick maximum proba solutions
+            bestAdaptationIndices = np.where(adaptationsRanks == np.max(adaptationsRanks))
             bestAdaptations = adaptations[bestAdaptationIndices]
             bestAdaptationsConfidence = adaptationsConfidence[bestAdaptationIndices]
 
+            # select the best n based on the score
+            if len(bestAdaptations) > self.n_startingSolutions:
+                bestAdaptationsScores = [self.optimizationScoreFunction(a) for a in bestAdaptations]
+                bestAdaptationIndices = np.argpartition(bestAdaptationsScores, -self.n_startingSolutions)[-self.n_startingSolutions:]
+                bestAdaptations = bestAdaptations[bestAdaptationIndices]
+                bestAdaptationsConfidence = bestAdaptationsConfidence[bestAdaptationIndices]
+
+            """
+            print("\nStarting adaptations ranking:")
+            print(adaptationsRanks)
+            """
+            print("Best starting adaptations: " + str(bestAdaptationIndices))
+
         print(bestAdaptations[:, :n_controllableFeatures])
-        print("With confidence:")
+        print("\nBest starting adaptations confidence:")
         print(bestAdaptationsConfidence)
 
         # enhance solutions
         optimizationSteps = [0] * len(bestAdaptations)
 
-        # optimize score if the adaptations are valid
-        if validAdaptationFound:
-            for i, adaptation, confidence in enumerate(bestAdaptations, bestAdaptationsConfidence):
-                excludedFeatures = []
-                while len(excludedFeatures) < n_controllableFeatures:
-                    adaptation, confidence = self.optimizeScoreStep(adaptation, confidence, excludedFeatures)
-                    optimizationSteps[i] += 1
+        for i in range(len(bestAdaptations)):
+            excludedFeatures = []
+            tempExcludedFeatures = []
+            adaptation = bestAdaptations[i]
+            confidence = bestAdaptationsConfidence[i]
+            while len(excludedFeatures) + len(tempExcludedFeatures) < n_controllableFeatures:
+                adaptation, confidence = self.optimizeScoreStep(adaptation, confidence, validAdaptationFound, excludedFeatures, tempExcludedFeatures)
+                optimizationSteps[i] += 1
 
-                bestAdaptations[i] = adaptation
-                bestAdaptationsConfidence[i] = confidence
+            bestAdaptations[i] = adaptation
+            bestAdaptationsConfidence[i] = confidence
 
         print("\nScore optimization steps: " + str(optimizationSteps))
 
-        print("Final adaptations:")
+        # remove duplicate solutions (there can be new duplicates after the optimization phase)
+        bestAdaptations, indices = np.unique(bestAdaptations, axis=0, return_index=True)
+        bestAdaptationsConfidence = bestAdaptationsConfidence[indices]
+
+        print("\nFinal adaptations:")
         print(bestAdaptations[:, :n_controllableFeatures])
 
-        print("\nFinal confidence:")
+        print("\nFinal adaptations confidence:")
         print(bestAdaptationsConfidence)
 
-        if validAdaptationFound:
-            bestAdaptationsScores = [solutionScore(bestAdaptations[i], bestAdaptationsConfidence[i])
-                                     for i in range(len(bestAdaptations))]
-        else:
-            bestAdaptationsScores = [solutionScore(bestAdaptations[i]) for i in range(len(bestAdaptations))]
+        bestAdaptationsScores = [self.optimizationScoreFunction(a) for a in bestAdaptations]
+        print("\nFinal adaptations scores:")
+        print(bestAdaptationsScores)
 
         finalAdaptationIndex = np.argmax(bestAdaptationsScores)
         finalAdaptation = bestAdaptations[finalAdaptationIndex]
         finalAdaptationConfidence = bestAdaptationsConfidence[finalAdaptationIndex]
-        print("\nBest final adaptation:")
+        print("\nBest final adaptation: " + str(finalAdaptationIndex))
         print(finalAdaptation[:n_controllableFeatures])
         print("With confidence:")
         print(finalAdaptationConfidence)
+        print()
 
-        return finalAdaptation, finalAdaptationConfidence, self.optimizationScoreFunction(finalAdaptation)
+        return finalAdaptation, finalAdaptationConfidence, bestAdaptationsScores[finalAdaptationIndex]

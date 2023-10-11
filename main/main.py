@@ -15,7 +15,7 @@ from NSGA3Planner import NSGA3Planner
 from util import vecPredictProba
 
 
-# provided success score function (based on the signed distance with respect to the target success probabilities)
+# success score function (based on the signed distance with respect to the target success probabilities)
 def successScore(adaptation, reqClassifiers, targetSuccessProba):
     return np.sum(vecPredictProba(reqClassifiers, [adaptation])[0] - targetSuccessProba)
 
@@ -49,10 +49,11 @@ if __name__ == '__main__':
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirections = [1, -1, -1, -1]
 
-    reqs = ["req_0"]#, "req_1", "req_2", "req_3"]
+    reqs = ["req_1"]#, "req_1", "req_2", "req_3"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
+    n_startingSolutions = 10
     n_controllableFeatures = len(controllableFeaturesNames)
 
     targetConfidence = np.full((1, n_reqs), 0.8)[0]
@@ -77,9 +78,9 @@ if __name__ == '__main__':
     controllableFeatureDomains = np.repeat([[0, 100]], n_controllableFeatures, 0)
 
     # initialize planners
-    customPlanner = CustomPlanner(X_train, n_neighbors, models, targetConfidence,
+    customPlanner = CustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
                                   controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
-                                  optimizationDirections, successScore, optimizationScore, 1, "../plots")
+                                  optimizationDirections, optimizationScore, 1, "../plots")
 
     nsga3Planner = NSGA3Planner(models, targetConfidence, successScore, optimizationScore)
 
