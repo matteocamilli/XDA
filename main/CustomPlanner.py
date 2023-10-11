@@ -28,7 +28,7 @@ class CustomPlanner:
 
         # train a k nearest neighbors classifier only used to find the neighbors of a sample in the dataset
         knn = KNeighborsClassifier()
-        knn.fit(X, np.zeros((X.shape[0], 1)))
+        knn.fit(X.values, np.zeros((X.shape[0],)))
         self.knn = knn
 
         # make pdps
@@ -53,14 +53,13 @@ class CustomPlanner:
                     os.makedirs(path)
             self.summaryPdps.append(pdp.multiplyPdps(self.pdps[i], path + "/" + feature + ".png"))
 
-    def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, excludedFeatures, tempExcludedFeatures):
+    def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures, tempExcludedFeatures):
         # select a feature to modify
         featureIndex = None
         controllableIndex = None
         minConfidenceLoss = None
         for i, index in enumerate(self.controllableFeatureIndices):
             if index not in excludedFeatures and index not in tempExcludedFeatures:
-                neighborIndex = np.ravel(self.knn.kneighbors([adaptation], 1, False))[0]
                 slope = pdp.getSlope(self.summaryPdps[i], adaptation[index], neighborIndex)
                 confidenceLoss = slope * self.optimizationDirections[i]
                 if minConfidenceLoss is None or confidenceLoss < minConfidenceLoss:
@@ -208,12 +207,12 @@ class CustomPlanner:
             print("\nStarting valid adaptations ranking:")
             print(validAdaptationsRanks)
             """
-            print("Best starting valid adaptations: " + str(bestAdaptationIndices))
+            # print("Best starting valid adaptations: " + str(bestAdaptationIndices))
         elif validAdaptationFound:
             # just keep the starting adaptations
             bestAdaptations = validAdaptations
             bestAdaptationsConfidence = validAdaptationsConfidence
-            print("Starting valid adaptations:")
+            # print("Starting valid adaptations:")
         else:
             # no valid adaptation found, so:
             # rank solutions based on success proba only
@@ -238,50 +237,66 @@ class CustomPlanner:
             print("\nStarting adaptations ranking:")
             print(adaptationsRanks)
             """
-            print("Best starting adaptations: " + str(bestAdaptationIndices))
+            # print("Best starting adaptations: " + str(bestAdaptationIndices))
 
+        """
         print(bestAdaptations[:, :n_controllableFeatures])
         print("\nBest starting adaptations confidence:")
         print(bestAdaptationsConfidence)
+        """
 
         # enhance solutions
         optimizationSteps = [0] * len(bestAdaptations)
-
+        calls = 0
         for i in range(len(bestAdaptations)):
             excludedFeatures = []
             tempExcludedFeatures = []
             adaptation = bestAdaptations[i]
             confidence = bestAdaptationsConfidence[i]
+            neighborIndex = np.ravel(self.knn.kneighbors([adaptation], 1, False))[0]
             while len(excludedFeatures) + len(tempExcludedFeatures) < n_controllableFeatures:
-                adaptation, confidence = self.optimizeScoreStep(adaptation, confidence, validAdaptationFound, excludedFeatures, tempExcludedFeatures)
+                # recalculate neighbor only once every n function calls lighten the computation
+                if calls >= 10:
+                    neighborIndex = np.ravel(self.knn.kneighbors([adaptation], 1, False))[0]
+                    # print(neighborIndex)
+                    calls = 0
+                adaptation, confidence = self.optimizeScoreStep(adaptation, confidence, validAdaptationFound,
+                                                                neighborIndex, excludedFeatures, tempExcludedFeatures)
                 optimizationSteps[i] += 1
+                calls += 1
 
             bestAdaptations[i] = adaptation
             bestAdaptationsConfidence[i] = confidence
 
-        print("\nScore optimization steps: " + str(optimizationSteps))
+        # print("\nScore optimization steps: " + str(optimizationSteps))
 
         # remove duplicate solutions (there can be new duplicates after the optimization phase)
         bestAdaptations, indices = np.unique(bestAdaptations, axis=0, return_index=True)
         bestAdaptationsConfidence = bestAdaptationsConfidence[indices]
 
+        """
         print("\nFinal adaptations:")
         print(bestAdaptations[:, :n_controllableFeatures])
 
         print("\nFinal adaptations confidence:")
         print(bestAdaptationsConfidence)
+        """
 
         bestAdaptationsScores = [self.optimizationScoreFunction(a) for a in bestAdaptations]
+        """
         print("\nFinal adaptations scores:")
         print(bestAdaptationsScores)
+        """
 
         finalAdaptationIndex = np.argmax(bestAdaptationsScores)
         finalAdaptation = bestAdaptations[finalAdaptationIndex]
         finalAdaptationConfidence = bestAdaptationsConfidence[finalAdaptationIndex]
+        """
         print("\nBest final adaptation: " + str(finalAdaptationIndex))
         print(finalAdaptation[:n_controllableFeatures])
         print("With confidence:")
         print(finalAdaptationConfidence)
         print()
+        """
 
         return finalAdaptation, finalAdaptationConfidence, bestAdaptationsScores[finalAdaptationIndex]

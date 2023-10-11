@@ -28,7 +28,7 @@ class NSGA3Planner:
         )
 
         # create problem instance
-        self.problem = Adaptation(reqClassifiers, targetConfidence, [])
+        self.problem = Adaptation(reqClassifiers, targetConfidence, 455, [])
 
     def findAdaptation(self, externalFeatures):
         # set problem
@@ -64,18 +64,27 @@ class NSGA3Planner:
 
 
 class Adaptation(Problem):
-    def __init__(self, models, targetConfidence, externalFeatures):
+    @property
+    def externalFeatures(self):
+        return self._externalFeatures
+
+    @externalFeatures.setter
+    def externalFeatures(self, externalFeatures):
+        self._externalFeatures = np.repeat([externalFeatures], self.popSize, axis=0)
+
+    def __init__(self, models, targetConfidence, popSize, externalFeatures):
         super().__init__(n_var=4, n_obj=4, n_constr=len(models), xl=0.0, xu=100.0)
         self.models = models
-        self.targetConfidence = targetConfidence
+        self.targetConfidence = np.repeat([targetConfidence], popSize, axis=0)
+        self.popSize = popSize
         self.externalFeatures = externalFeatures
 
     def _evaluate(self, x, out, *args, **kwargs):
-        xFull = np.c_[x, np.tile(self.externalFeatures, (x.shape[0], 1))]
+        xFull = np.append(x, self.externalFeatures, axis=1)
         f1 = -x[:, 0]
         f2 = x[:, 1]
         f3 = x[:, 2]
         f4 = x[:, 3]
 
         out["F"] = [f1, f2, f3, f4]
-        out["G"] = [self.targetConfidence[i] - self.models[i].predict_proba(xFull)[:, 1] for i in range(self.n_constr)]
+        out["G"] = [self.targetConfidence - vecPredictProba(self.models, xFull)]

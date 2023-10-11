@@ -3,10 +3,12 @@ import numpy as np
 
 
 def vecPredictProba(models, X):
-    probas = []
-    for model in models:
-        probas.append(model.predict_proba(X))
-    probas = np.ravel(probas)[1::2]
+    if type(X) is list:
+        X = np.array(X)
+
+    probas = np.empty((X.shape[0], len(models)))
+    for i, model in enumerate(models):
+        probas[:, i] = model.predict_proba(X)[:, 1]
     probas = np.column_stack(np.split(probas, len(models)))
     return probas
 
