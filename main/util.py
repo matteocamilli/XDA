@@ -1,3 +1,4 @@
+import os
 import numpy as np
 
 
@@ -17,3 +18,15 @@ def cartesian_product(*arrays):
     for i, a in enumerate(np.ix_(*arrays)):
         arr[..., i] = a
     return arr.reshape(-1, la)
+
+def evaluateAdaptations(dataset, name):
+    os.chdir("../MDP_Dataset_Builder")
+    np.save("./starting_combinations.npy", dataset)
+    os.system("execute.bat ./starting_combinations.npy")
+    os.system("merge_csvs.py")
+
+    # Rename the file
+    os.chdir("..")
+    source_file = './MDP_Dataset_Builder/merge.csv'
+    new_file = './results/' + name + '.csv'
+    os.rename(source_file, new_file)
