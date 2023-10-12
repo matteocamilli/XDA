@@ -21,6 +21,7 @@ def cartesian_product(*arrays):
         arr[..., i] = a
     return arr.reshape(-1, la)
 
+
 def evaluateAdaptations(dataset, name):
     os.chdir("../MDP_Dataset_Builder")
     np.save("./starting_combinations.npy", dataset)

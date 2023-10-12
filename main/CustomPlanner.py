@@ -247,8 +247,8 @@ class CustomPlanner:
 
         # enhance solutions
         optimizationSteps = [0] * len(bestAdaptations)
-        calls = 0
         for i in range(len(bestAdaptations)):
+            calls = 0
             excludedFeatures = []
             tempExcludedFeatures = []
             adaptation = bestAdaptations[i]
