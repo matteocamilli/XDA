@@ -52,7 +52,7 @@ if __name__ == '__main__':
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirections = [1, -1, -1, -1]
 
-    reqs = ["req_1"]#, "req_1", "req_2", "req_3"]
+    reqs = ["req_0", "req_1", "req_2", "req_3"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     for f in files:
         os.remove(f)
 
-    testNum = 2
+    testNum = 200
     for k in range(1, testNum + 1):
         random.seed()
         rowIndex = k - 1  # random.randrange(0, X_test.shape[0])

@@ -9,7 +9,6 @@ def vecPredictProba(models, X):
     probas = np.empty((X.shape[0], len(models)))
     for i, model in enumerate(models):
         probas[:, i] = model.predict_proba(X)[:, 1]
-    probas = np.column_stack(np.split(probas, len(models)))
     return probas
 
 

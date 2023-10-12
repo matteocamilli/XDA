@@ -21,6 +21,7 @@ class CustomPlanner:
         self.reqClassifiers = reqClassifiers
         self.targetConfidence = targetConfidence
         self.controllableFeatureIndices = np.array(controllableFeatureIndices)
+        self.externalFeatureIndices = np.delete(np.array(range(X.shape[1])), controllableFeatureIndices)
         self.controllableFeatureDomains = controllableFeatureDomains
         self.optimizationDirections = optimizationDirections
         self.optimizationScoreFunction = optimizationScoreFunction
@@ -59,7 +60,7 @@ class CustomPlanner:
         controllableIndex = None
         minConfidenceLoss = None
         for i, index in enumerate(self.controllableFeatureIndices):
-            if index not in excludedFeatures and index not in tempExcludedFeatures:
+            if i not in excludedFeatures and i not in tempExcludedFeatures:
                 slope = pdp.getSlope(self.summaryPdps[i], adaptation[index], neighborIndex)
                 confidenceLoss = slope * self.optimizationDirections[i]
                 if minConfidenceLoss is None or confidenceLoss < minConfidenceLoss:
@@ -80,10 +81,10 @@ class CustomPlanner:
 
         if newAdaptation[featureIndex] < featureMin:
             newAdaptation[featureIndex] = featureMin
-            excludedFeatures.append(featureIndex)
+            excludedFeatures.append(controllableIndex)
         elif newAdaptation[featureIndex] > featureMax:
             newAdaptation[featureIndex] = featureMax
-            excludedFeatures.append(featureIndex)
+            excludedFeatures.append(controllableIndex)
 
         newConfidence = vecPredictProba(self.reqClassifiers, [newAdaptation])[0]
 
@@ -91,7 +92,7 @@ class CustomPlanner:
                 or (not isValidAdaptation and (newConfidence < confidence).any()):
             newAdaptation = np.copy(adaptation)
             newConfidence = np.copy(confidence)
-            tempExcludedFeatures.append(featureIndex)
+            tempExcludedFeatures.append(controllableIndex)
         else:
             tempExcludedFeatures.clear()
 
@@ -155,7 +156,7 @@ class CustomPlanner:
 
             possibilities = cartesian_product(*maximals)
             possibilities = np.append(possibilities,
-                                      np.repeat([row[n_controllableFeatures:]], possibilities.shape[0], axis=0),
+                                      np.repeat([row[self.externalFeatureIndices]], possibilities.shape[0], axis=0),
                                       axis=1)
 
             """
@@ -173,7 +174,7 @@ class CustomPlanner:
 
         """
         print("\nStarting adaptations:")
-        print(adaptations[:, :n_controllableFeatures])
+        print(adaptations[:, self.controllableFeatureIndices])
         print("\nStarting adaptations confidence:")
         print(adaptationsConfidence)
         print("\nStarting adaptations score:")
@@ -194,7 +195,9 @@ class CustomPlanner:
             # rank solutions based on success proba and score
             def solutionRank(a, c):
                 return (self.optimizationScoreFunction(a) +
-                        np.sum(c - self.targetConfidence) / np.sum(np.ravel(np.ones((1, len(self.reqClassifiers)))) - self.targetConfidence) * 100)
+                        np.sum(c - self.targetConfidence) / np.sum(solutionRank.ones - self.targetConfidence) * 100)
+            # function constant to avoid useless computation at each call
+            solutionRank.ones = np.ravel(np.ones((1, len(self.reqClassifiers))))
 
             validAdaptationsRanks = [solutionRank(validAdaptations[i], validAdaptationsConfidence[i])
                                      for i in range(len(validAdaptations))]
@@ -276,7 +279,7 @@ class CustomPlanner:
 
         """
         print("\nFinal adaptations:")
-        print(bestAdaptations[:, :n_controllableFeatures])
+        print(bestAdaptations[:, self.controllableFeatureIndices])
 
         print("\nFinal adaptations confidence:")
         print(bestAdaptationsConfidence)
@@ -293,7 +296,7 @@ class CustomPlanner:
         finalAdaptationConfidence = bestAdaptationsConfidence[finalAdaptationIndex]
         """
         print("\nBest final adaptation: " + str(finalAdaptationIndex))
-        print(finalAdaptation[:n_controllableFeatures])
+        print(finalAdaptation[self.controllableFeatureIndices])
         print("With confidence:")
         print(finalAdaptationConfidence)
         print()
