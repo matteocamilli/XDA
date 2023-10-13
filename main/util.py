@@ -31,4 +31,9 @@ def evaluateAdaptations(dataset, name):
     os.chdir("..")
     source_file = './MDP_Dataset_Builder/merge.csv'
     new_file = './results/' + name + '.csv'
+    if os.path.exists(new_file):
+        os.remove(new_file)
+    # i = 1
+    # while os.path.exists(new_file):
+    #     new_file = './results/' + name + "(" + i + ")" + '.csv'
     os.rename(source_file, new_file)
