@@ -1,20 +1,21 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from ast import literal_eval
+from util import *
+
 
 def personalizedBoxPlot(data, name, rotation = 0):
-    fig = plt.figure(figsize=(10, 7))
-    ax = fig.add_subplot(111)
+    columns = data.columns
+    nColumns = len(columns)
+    fig = plt.figure(figsize=(10, 10 * nColumns/2))
+    ax1 = fig.add_subplot(nColumns, 1, 1)
 
     # Creating axes instance
-    bp = ax.boxplot(data, patch_artist=True,
-                    notch='True', vert=True)
+    bp = ax1.boxplot(data, patch_artist=True,
+                     notch='True', vert=True)
 
-    colors = ['#0000FF', '#00FF00',
-              '#FFFF00', '#FF00FF',
-              '#0000FF', '#00FF00',
-              '#FFFF00', '#FF00FF']
+    colors = plt.cm.viridis(np.linspace(0, 1, nColumns))
+    colors = np.append(colors[0::2], colors[1::2], axis=0)
 
     for patch, color in zip(bp['boxes'], colors):
         patch.set_facecolor(color)
@@ -45,27 +46,38 @@ def personalizedBoxPlot(data, name, rotation = 0):
                   alpha=0.5)
 
     # x-axis labels
-    ax.set_xticklabels(data.columns, rotation = rotation)
+    ax1.set_xticklabels(data.columns, rotation = rotation)
 
     # Adding title
     plt.title(name)
 
     # Removing top axes and right axes
     # ticks
-    ax.get_xaxis().tick_bottom()
-    ax.get_yaxis().tick_left()
+    ax1.get_xaxis().tick_bottom()
+    ax1.get_yaxis().tick_left()
+
+    for i in range(int(nColumns/2)):
+        i2 = i + int(nColumns/2)
+        axn = fig.add_subplot(nColumns, 1, i + 2)
+        subset = data[[columns[i], columns[i2]]]
+        subset = subset.sort_values(columns[i2])
+        subset = subset.reset_index(drop=True)
+        # axn.title.set_text(columns[i] + ' | ' + columns[i + int(nColumns/2)])
+        subset.plot(ax=axn, color=colors[[i, i2]])
 
     fig.show()
 
 
-results = pd.read_csv('../results/results.csv')
-columns = ["nsga3_adaptation", "custom_adaptation", "nsga3_confidence", "custom_confidence"]
+# read dataframe from csv
+results = readFromCsv('../results/results.csv')
 
-for c in columns:
-    results[c] = results[c].apply(lambda x: np.fromstring(x[1:-1], dtype=float, sep=' '))
+evaluateAdaptations()
 
+# select sub-dataframes to plot
 confidences = results[["nsga3_confidence", "custom_confidence"]]
 nReqs = len(results["nsga3_confidence"][0])
+
+# decompose arrays columns into single values columns
 if nReqs > 1:
     nsga3Confidences = pd.DataFrame(results['nsga3_confidence'].to_list(),
                                     columns=['nsga3_req_' + str(i) for i in range(nReqs)])

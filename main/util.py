@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 
 
 def vecPredictProba(models, X):
@@ -37,3 +38,13 @@ def evaluateAdaptations(dataset, name):
     # while os.path.exists(new_file):
     #     new_file = './results/' + name + "(" + i + ")" + '.csv'
     os.rename(source_file, new_file)
+
+def readFromCsv(path):
+    results = pd.read_csv(path)
+    columns = ["nsga3_adaptation", "custom_adaptation", "nsga3_confidence", "custom_confidence"]
+
+    # numpy arrays are read as strings, must convert them back in arrays
+    for c in columns:
+        results[c] = results[c].apply(lambda x: np.fromstring(x[1:-1], dtype=float, sep=' '))
+
+    return results
