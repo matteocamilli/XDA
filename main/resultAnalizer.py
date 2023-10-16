@@ -71,7 +71,22 @@ def personalizedBoxPlot(data, name, rotation = 0):
 # read dataframe from csv
 results = readFromCsv('../results/results.csv')
 
-evaluateAdaptations()
+featureNames = ["cruise speed",
+                    "image resolution",
+                    "illuminance",
+                    "controls responsiveness",
+                    "power",
+                    "smoke intensity",
+                    "obstacle size",
+                    "obstacle distance",
+                    "firm obstacle"]
+
+customAdaptations = pd.DataFrame(results['custom_adaptation'].to_list(), columns=featureNames)
+nsga3Adaptations = pd.DataFrame(results['nsga3_adaptation'].to_list(), columns=featureNames)
+
+evaluateAdaptations(customAdaptations, "customDataset")
+evaluateAdaptations(nsga3Adaptations, "nsga3Dataset")
+
 
 # select sub-dataframes to plot
 confidences = results[["nsga3_confidence", "custom_confidence"]]
