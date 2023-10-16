@@ -4,6 +4,8 @@ import pandas as pd
 from util import *
 
 
+evaluate = True
+
 def personalizedBoxPlot(data, name, rotation = 0):
     columns = data.columns
     nColumns = len(columns)
@@ -71,22 +73,8 @@ def personalizedBoxPlot(data, name, rotation = 0):
 # read dataframe from csv
 results = readFromCsv('../results/results.csv')
 
-featureNames = ["cruise speed",
-                    "image resolution",
-                    "illuminance",
-                    "controls responsiveness",
-                    "power",
-                    "smoke intensity",
-                    "obstacle size",
-                    "obstacle distance",
-                    "firm obstacle"]
-
-customAdaptations = pd.DataFrame(results['custom_adaptation'].to_list(), columns=featureNames)
-nsga3Adaptations = pd.DataFrame(results['nsga3_adaptation'].to_list(), columns=featureNames)
-
-evaluateAdaptations(customAdaptations, "customDataset")
-evaluateAdaptations(nsga3Adaptations, "nsga3Dataset")
-
+if evaluate:
+    evaluateAdaptations(results)
 
 # select sub-dataframes to plot
 confidences = results[["nsga3_confidence", "custom_confidence"]]
@@ -106,3 +94,5 @@ times = results[["nsga3_time", "custom_time"]]
 personalizedBoxPlot(confidences, "Confidences comparison", 30)
 personalizedBoxPlot(scores, "Score comparison")
 personalizedBoxPlot(times, "Execution time comparison")
+
+customDataset = pd.read_csv('../results/customDataset.csv')

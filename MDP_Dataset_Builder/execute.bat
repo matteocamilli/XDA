@@ -4,7 +4,6 @@ set TOTAL_THREADS=8
 set /a LAST_THREAD=%TOTAL_THREADS%-1
 set NUM_THREADS=0
 set PATH_TO_DATASET=%1
-set wait=
 
 :loop
 if %NUM_THREADS% == %LAST_THREAD% goto end
@@ -15,4 +14,6 @@ set /a NUM_THREADS=%NUM_THREADS%+1
 goto loop
 
 :end
-CMD /C "python .\main.py --index-to-run %NUM_THREADS% --total-executions %TOTAL_THREADS% --path-to-dataset %PATH_TO_DATASET%"
+START /WAIT CMD /C "python .\main.py --index-to-run %NUM_THREADS% --total-executions %TOTAL_THREADS% --path-to-dataset %PATH_TO_DATASET%"
+
+CMD /C "python merge_csvs.py"

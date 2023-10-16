@@ -12,7 +12,7 @@ from model.ModelConstructor import constructModel
 import explainability_techniques.LIME as lime
 from CustomPlanner import CustomPlanner
 from NSGA3Planner import NSGA3Planner
-from util import vecPredictProba, evaluateAdaptations
+from util import *
 
 
 # success score function (based on the signed distance with respect to the target success probabilities)
@@ -190,8 +190,6 @@ if __name__ == '__main__':
                         nsga3Confidence, customConfidence,
                         nsga3Score, customScore, scoreDiff, scoreImprovement,
                         nsga3Time, customTime, speedup])
-        customDataset.append(customAdaptation)
-        nsga3Dataset.append(nsga3Adaptation)
 
     results = pd.DataFrame(results, columns=["nsga3_adaptation", "custom_adaptation",
                                              "nsga3_confidence", "custom_confidence",
@@ -202,12 +200,8 @@ if __name__ == '__main__':
         os.makedirs(path)
     results.to_csv(path + "/results.csv")
 
-    customDataset = np.array(customDataset)
-    nsga3Dataset = np.array(nsga3Dataset)
-
     if evaluate:
-        evaluateAdaptations(customDataset, "customDataset")
-        evaluateAdaptations(nsga3Dataset, "nsga3Dataset")
+        evaluateAdaptations(results)
 
     programEndTime = time.time()
     totalExecutionTime = programEndTime - programStartTime

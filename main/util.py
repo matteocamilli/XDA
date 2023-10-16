@@ -22,11 +22,10 @@ def cartesian_product(*arrays):
     return arr.reshape(-1, la)
 
 
-def evaluateAdaptations(dataset, name):
+def evaluateDataset(dataset, name):
     os.chdir("../MDP_Dataset_Builder")
     np.save("./starting_combinations.npy", dataset)
     os.system("execute.bat ./starting_combinations.npy")
-    os.system("merge_csvs.py")
 
     # Rename the file
     os.chdir("..")
@@ -38,6 +37,24 @@ def evaluateAdaptations(dataset, name):
     # while os.path.exists(new_file):
     #     new_file = './results/' + name + "(" + i + ")" + '.csv'
     os.rename(source_file, new_file)
+
+def evaluateAdaptations(dataset):
+
+    featureNames = ["cruise speed",
+                    "image resolution",
+                    "illuminance",
+                    "controls responsiveness",
+                    "power",
+                    "smoke intensity",
+                    "obstacle size",
+                    "obstacle distance",
+                    "firm obstacle"]
+
+    customAdaptations = pd.DataFrame(dataset['custom_adaptation'].to_list(), columns=featureNames)
+    nsga3Adaptations = pd.DataFrame(dataset['nsga3_adaptation'].to_list(), columns=featureNames)
+
+    evaluateDataset(customAdaptations, "customDataset")
+    evaluateDataset(nsga3Adaptations, "nsga3Dataset")
 
 def readFromCsv(path):
     results = pd.read_csv(path)
