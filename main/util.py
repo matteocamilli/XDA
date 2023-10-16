@@ -27,7 +27,7 @@ def evaluateDataset(dataset, name):
     os.chdir(sys.path[0])
     os.chdir("../MDP_Dataset_Builder")
     np.save("./starting_combinations.npy", dataset)
-    os.system("./execute.sh ./starting_combinations.npy")
+    os.system("execute.bat ./starting_combinations.npy")
 
     # Rename the file
     os.chdir("..")

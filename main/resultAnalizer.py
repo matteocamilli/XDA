@@ -71,7 +71,7 @@ def personalizedBoxPlot(data, name, rotation=0):
 
 
 os.chdir(sys.path[0])
-evaluate = True
+evaluate = False
 
 # read dataframe from csv
 results = readFromCsv('../results/resultsAll.csv')
@@ -99,3 +99,10 @@ personalizedBoxPlot(scores, "Score comparison")
 personalizedBoxPlot(times, "Execution time comparison")
 
 customDataset = pd.read_csv('../results/customDataset.csv')
+nsga3Dataset = pd.read_csv('../results/nsga3Dataset.csv')
+
+customAverages = customDataset.loc[:, "req_0":].mean(axis=1)
+nsga3Averages = nsga3Dataset.loc[:, "req_0":].mean(axis=1)
+
+print(customAverages.mean())
+print(nsga3Averages.mean())
