@@ -45,16 +45,7 @@ def evaluateDataset(dataset, name):
     os.rename(source_file, new_file)
 
 
-def evaluateAdaptations(dataset):
-    featureNames = ["cruise speed",
-                    "image resolution",
-                    "illuminance",
-                    "controls responsiveness",
-                    "power",
-                    "smoke intensity",
-                    "obstacle size",
-                    "obstacle distance",
-                    "firm obstacle"]
+def evaluateAdaptations(dataset, featureNames):
 
     customAdaptations = pd.DataFrame(dataset['custom_adaptation'].to_list(), columns=featureNames)
     nsga3Adaptations = pd.DataFrame(dataset['nsga3_adaptation'].to_list(), columns=featureNames)

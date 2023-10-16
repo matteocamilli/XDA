@@ -16,8 +16,8 @@ def personalizedBoxPlot(data, name, rotation=0):
     bp = ax1.boxplot(data, patch_artist=True,
                      notch='True', vert=True)
 
-    colors = plt.cm.viridis(np.linspace(0, 1, nColumns))
-    colors = np.append(colors[0::2], colors[1::2], axis=0)
+    colors = plt.cm.hsv(np.linspace(.1, .9, nColumns))
+    #colors = np.append(colors[0::2], colors[1::2], axis=0)
 
     for patch, color in zip(bp['boxes'], colors):
         patch.set_facecolor(color)
@@ -73,36 +73,70 @@ def personalizedBoxPlot(data, name, rotation=0):
 os.chdir(sys.path[0])
 evaluate = False
 
+pathToResults = '../results/req3/'
+
+featureNames = ["cruise speed",
+                    "image resolution",
+                    "illuminance",
+                    "controls responsiveness",
+                    "power",
+                    "smoke intensity",
+                    "obstacle size",
+                    "obstacle distance",
+                    "firm obstacle"]
+
+reqs = ["req_0", "req_1", "req_2", "req_3"]
+
 # read dataframe from csv
-results = readFromCsv('../results/resultsAll.csv')
+results = readFromCsv(pathToResults + 'results.csv')
+nReqs = len(results["nsga3_confidence"][0])
+reqs = reqs[:nReqs]
+targetConfidence = np.full((1, nReqs), 0.8)[0]
 
 if evaluate:
-    evaluateAdaptations(results)
+    evaluateAdaptations(results, featureNames)
 
-# select sub-dataframes to plot
-confidences = results[["nsga3_confidence", "custom_confidence"]]
-nReqs = len(results["nsga3_confidence"][0])
+#read outcomes from csv
+customDataset = pd.read_csv(pathToResults + 'customDataset.csv')
+nsga3Dataset = pd.read_csv(pathToResults + 'nsga3Dataset.csv')
+
+#build indices arrays
+nsga3ConfidenceNames = ['nsga3_confidence_' + req for req in reqs]
+nsga3OutcomeNames = ['nsga3_outcome_' + req for req in reqs]
+customConfidenceNames = ['custom_confidence_' + req for req in reqs]
+customOutcomeNames = ['custom_confidence_' + req for req in reqs]
+
+#outcomes dataframe
+outcomes = pd.concat([nsga3Dataset[reqs].mean(axis=1), customDataset[reqs].mean(axis=1)], axis=1)
+outcomes.columns = ['nsga3', 'custom']
 
 # decompose arrays columns into single values columns
-if nReqs > 1:
-    nsga3Confidences = pd.DataFrame(results['nsga3_confidence'].to_list(),
-                                    columns=['nsga3_req_' + str(i) for i in range(nReqs)])
-    customConfidences = pd.DataFrame(results['custom_confidence'].to_list(),
-                                     columns=['custom_req_' + str(i) for i in range(nReqs)])
-    confidences = pd.concat([nsga3Confidences, customConfidences], axis=1)
+nsga3Confidences = pd.DataFrame(results['nsga3_confidence'].to_list(),
+                                columns=nsga3ConfidenceNames)
+customConfidences = pd.DataFrame(results['custom_confidence'].to_list(),
+                                 columns=customConfidenceNames)
 
+# select sub-dataframes to plot
+confidences = pd.concat([nsga3Confidences, customConfidences], axis=1)
 scores = results[["nsga3_score", "custom_score"]]
 times = results[["nsga3_time", "custom_time"]]
 
+#plots
 personalizedBoxPlot(confidences, "Confidences comparison", 30)
 personalizedBoxPlot(scores, "Score comparison")
 personalizedBoxPlot(times, "Execution time comparison")
 
-customDataset = pd.read_csv('../results/allReqs/customDataset.csv')
-nsga3Dataset = pd.read_csv('../results/allReqs/nsga3Dataset.csv')
+#mapping
+bothSuccesful = pd.concat([confidences[nsga3ConfidenceNames] > targetConfidence, confidences[customConfidenceNames] > targetConfidence], axis=1).all(axis=1)
+onlyNsga3Succesful = pd.concat([confidences[nsga3ConfidenceNames] > targetConfidence, confidences[customConfidenceNames] <= targetConfidence], axis=1).all(axis=1)
+onlyCustomSuccesful = pd.concat([confidences[nsga3ConfidenceNames] <= targetConfidence, confidences[customConfidenceNames] > targetConfidence], axis=1).all(axis=1)
+noneSuccesful = pd.concat([confidences[nsga3ConfidenceNames] <= targetConfidence, confidences[customConfidenceNames] <= targetConfidence], axis=1).all(axis=1)
 
-customAverages = customDataset.loc[:, "req_0":].mean(axis=1)
-nsga3Averages = nsga3Dataset.loc[:, "req_0":].mean(axis=1)
+#results
+averages = pd.concat([outcomes[bothSuccesful].mean(),
+                      outcomes[onlyNsga3Succesful].mean(),
+                      outcomes[onlyCustomSuccesful].mean(),
+                      outcomes[noneSuccesful].mean()], axis=1)
+averages.columns = ['both', 'nsga3_only', 'custom_only', 'none']
 
-print(customAverages.mean())
-print(nsga3Averages.mean())
+print(averages)

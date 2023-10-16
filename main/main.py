@@ -201,7 +201,7 @@ if __name__ == '__main__':
     results.to_csv(path + "/results.csv")
 
     if evaluate:
-        evaluateAdaptations(results)
+        evaluateAdaptations(results, featureNames)
 
     programEndTime = time.time()
     totalExecutionTime = programEndTime - programStartTime
