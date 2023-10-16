@@ -20,7 +20,7 @@ def constructModel(X_train, X_test, y_train, y_test, export=False):
     lr_model_AUC = round(roc_auc_score(y_test, lr_model.predict_proba(X_test)[:, 1]), 3)
 
     # Random Forests
-    rf_model = RandomForestClassifier(random_state=1234, n_jobs=16)
+    rf_model = RandomForestClassifier(random_state=1234, n_jobs=10)
     rf_model.fit(X_train, y_train)
     rf_model_AUC = round(roc_auc_score(y_test, rf_model.predict_proba(X_test)[:, 1]), 3)
 

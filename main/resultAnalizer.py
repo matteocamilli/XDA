@@ -1,12 +1,12 @@
-import matplotlib.pyplot as plt
+import os
+import sys
 import numpy as np
 import pandas as pd
-from util import *
+import matplotlib.pyplot as plt
+from util import readFromCsv, evaluateAdaptations
 
 
-evaluate = True
-
-def personalizedBoxPlot(data, name, rotation = 0):
+def personalizedBoxPlot(data, name, rotation=0):
     columns = data.columns
     nColumns = len(columns)
     fig = plt.figure(figsize=(10, 10 * nColumns/2))
@@ -70,8 +70,11 @@ def personalizedBoxPlot(data, name, rotation = 0):
     fig.show()
 
 
+os.chdir(sys.path[0])
+evaluate = True
+
 # read dataframe from csv
-results = readFromCsv('../results/results.csv')
+results = readFromCsv('../results/resultsAll.csv')
 
 if evaluate:
     evaluateAdaptations(results)
@@ -85,7 +88,7 @@ if nReqs > 1:
     nsga3Confidences = pd.DataFrame(results['nsga3_confidence'].to_list(),
                                     columns=['nsga3_req_' + str(i) for i in range(nReqs)])
     customConfidences = pd.DataFrame(results['custom_confidence'].to_list(),
-                                    columns=['custom_req_' + str(i) for i in range(nReqs)])
+                                     columns=['custom_req_' + str(i) for i in range(nReqs)])
     confidences = pd.concat([nsga3Confidences, customConfidences], axis=1)
 
 scores = results[["nsga3_score", "custom_score"]]

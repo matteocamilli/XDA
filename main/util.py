@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 import pandas as pd
 
@@ -23,9 +24,10 @@ def cartesian_product(*arrays):
 
 
 def evaluateDataset(dataset, name):
+    os.chdir(sys.path[0])
     os.chdir("../MDP_Dataset_Builder")
     np.save("./starting_combinations.npy", dataset)
-    os.system("execute.bat ./starting_combinations.npy")
+    os.system("./execute.sh ./starting_combinations.npy")
 
     # Rename the file
     os.chdir("..")
@@ -38,8 +40,8 @@ def evaluateDataset(dataset, name):
     #     new_file = './results/' + name + "(" + i + ")" + '.csv'
     os.rename(source_file, new_file)
 
-def evaluateAdaptations(dataset):
 
+def evaluateAdaptations(dataset):
     featureNames = ["cruise speed",
                     "image resolution",
                     "illuminance",
@@ -55,6 +57,7 @@ def evaluateAdaptations(dataset):
 
     evaluateDataset(customAdaptations, "customDataset")
     evaluateDataset(nsga3Adaptations, "nsga3Dataset")
+
 
 def readFromCsv(path):
     results = pd.read_csv(path)
