@@ -34,7 +34,7 @@ if __name__ == '__main__':
     warnings.filterwarnings("ignore")
 
     # evaluate adaptations
-    evaluate = False
+    evaluate = True
 
     ds = pd.read_csv('../datasets/dataset5000.csv')
     featureNames = ["cruise speed",
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirections = [1, -1, -1, -1]
 
-    reqs = ["req_0", "req_1", "req_2", "req_3"]
+    reqs = ["req_3"]#, "req_1", "req_2", "req_3"]
 
     n_reqs = len(reqs)
     n_neighbors = 10

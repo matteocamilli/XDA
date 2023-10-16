@@ -98,8 +98,8 @@ personalizedBoxPlot(confidences, "Confidences comparison", 30)
 personalizedBoxPlot(scores, "Score comparison")
 personalizedBoxPlot(times, "Execution time comparison")
 
-customDataset = pd.read_csv('../results/customDataset.csv')
-nsga3Dataset = pd.read_csv('../results/nsga3Dataset.csv')
+customDataset = pd.read_csv('../results/allReqs/customDataset.csv')
+nsga3Dataset = pd.read_csv('../results/allReqs/nsga3Dataset.csv')
 
 customAverages = customDataset.loc[:, "req_0":].mean(axis=1)
 nsga3Averages = nsga3Dataset.loc[:, "req_0":].mean(axis=1)
