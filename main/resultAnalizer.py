@@ -3,21 +3,28 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib import ticker
+
 from util import readFromCsv, evaluateAdaptations
 
 
-def personalizedBoxPlot(data, name, rotation=0):
+def personalizedBoxPlot(data, name, columnNames=None, rotation=0, path=None):
     columns = data.columns
     nColumns = len(columns)
-    fig = plt.figure(figsize=(10, 10 * nColumns/2))
-    ax1 = fig.add_subplot(nColumns, 1, 1)
+    fig = plt.figure()#plt.figure(figsize=(10, 10 * nColumns/2))
+    ax1 = fig.add_subplot(111)#(nColumns, 1, 1)
 
     # Creating axes instance
     bp = ax1.boxplot(data, patch_artist=True,
                      notch='True', vert=True)
 
-    colors = plt.cm.hsv(np.linspace(.1, .9, nColumns))
+    colors = plt.cm.Spectral(np.linspace(.1, .9, 2))
     #colors = np.append(colors[0::2], colors[1::2], axis=0)
+    c = np.copy(colors)
+    for i in range(nColumns//2):
+        c = np.append(c, colors, axis=0)
+
+    colors = c
 
     for patch, color in zip(bp['boxes'], colors):
         patch.set_facecolor(color)
@@ -48,7 +55,18 @@ def personalizedBoxPlot(data, name, rotation=0):
                   alpha=0.5)
 
     # x-axis labels
-    ax1.set_xticklabels(data.columns, rotation = rotation)
+
+    if columnNames is not None:
+        ax1.xaxis.set_ticks(np.arange(1.5, len(columnNames) * 2, step=2), columnNames, rotation=rotation)
+    else:
+        plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+
+    #legend
+    box = ax1.get_position()
+    ax1.set_position([box.x0, box.y0 + box.height * 0.1,
+                     box.width, box.height * 0.9])
+    ax1.legend([bp["boxes"][0], bp["boxes"][1]], ["nsga3", "custom"],
+               ncol=2, loc='upper center', bbox_to_anchor=(0.5, -0.1))
 
     # Adding title
     plt.title(name)
@@ -58,6 +76,7 @@ def personalizedBoxPlot(data, name, rotation=0):
     ax1.get_xaxis().tick_bottom()
     ax1.get_yaxis().tick_left()
 
+    """
     for i in range(int(nColumns/2)):
         i2 = i + int(nColumns/2)
         axn = fig.add_subplot(nColumns, 1, i + 2)
@@ -66,9 +85,33 @@ def personalizedBoxPlot(data, name, rotation=0):
         subset = subset.reset_index(drop=True)
         # axn.title.set_text(columns[i] + ' | ' + columns[i + int(nColumns/2)])
         subset.plot(ax=axn, color=colors[[i, i2]])
+    """
+
+    if path is not None:
+        plt.savefig(path + name)
 
     fig.show()
 
+def personalizedBarChart(data, name, path=None):
+    colors = plt.cm.Spectral(np.linspace(.1, .9, 2))
+    # colors = np.append(colors[0::2], colors[1::2], axis=0)
+    c = np.copy(colors)
+    for i in range(len(data.values) // 2):
+        c = np.append(c, colors, axis=0)
+
+    colors = c
+
+    data.plot.bar(title=name, color=colors)
+
+    if len(data.index) > 1:
+        plt.xticks(rotation=0)
+    else:
+        plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+
+    if path is not None:
+        plt.savefig(path + name)
+
+    plt.show()
 
 os.chdir(sys.path[0])
 evaluate = False
@@ -97,18 +140,19 @@ if evaluate:
     evaluateAdaptations(results, featureNames)
 
 #read outcomes from csv
-customDataset = pd.read_csv(pathToResults + 'customDataset.csv')
-nsga3Dataset = pd.read_csv(pathToResults + 'nsga3Dataset.csv')
+customOutcomes = pd.read_csv(pathToResults + 'customDataset.csv')
+nsga3Outcomes = pd.read_csv(pathToResults + 'nsga3Dataset.csv')
 
 #build indices arrays
 nsga3ConfidenceNames = ['nsga3_confidence_' + req for req in reqs]
 nsga3OutcomeNames = ['nsga3_outcome_' + req for req in reqs]
 customConfidenceNames = ['custom_confidence_' + req for req in reqs]
-customOutcomeNames = ['custom_confidence_' + req for req in reqs]
+customOutcomeNames = ['custom_outcome_' + req for req in reqs]
 
 #outcomes dataframe
-outcomes = pd.concat([nsga3Dataset[reqs].mean(axis=1), customDataset[reqs].mean(axis=1)], axis=1)
-outcomes.columns = ['nsga3', 'custom']
+outcomes = pd.concat([nsga3Outcomes[reqs], customOutcomes[reqs]], axis=1)
+outcomes.columns = np.append(nsga3OutcomeNames, customOutcomeNames)
+outcomes = outcomes[list(sum(zip(nsga3OutcomeNames, customOutcomeNames), ()))]
 
 # decompose arrays columns into single values columns
 nsga3Confidences = pd.DataFrame(results['nsga3_confidence'].to_list(),
@@ -118,13 +162,18 @@ customConfidences = pd.DataFrame(results['custom_confidence'].to_list(),
 
 # select sub-dataframes to plot
 confidences = pd.concat([nsga3Confidences, customConfidences], axis=1)
+confidences = confidences[list(sum(zip(nsga3Confidences.columns, customConfidences.columns), ()))]
 scores = results[["nsga3_score", "custom_score"]]
 times = results[["nsga3_time", "custom_time"]]
 
 #plots
-personalizedBoxPlot(confidences, "Confidences comparison", 30)
-personalizedBoxPlot(scores, "Score comparison")
-personalizedBoxPlot(times, "Execution time comparison")
+plotPath = pathToResults + 'plots/'
+if not os.path.exists(plotPath):
+    os.makedirs(plotPath)
+
+personalizedBoxPlot(confidences, "Confidences comparison", reqs, path=plotPath)
+personalizedBoxPlot(scores, "Score comparison", path=plotPath)
+personalizedBoxPlot(times, "Execution time comparison", path=plotPath)
 
 #mapping
 bothSuccesful = pd.concat([confidences[nsga3ConfidenceNames] > targetConfidence, confidences[customConfidenceNames] > targetConfidence], axis=1).all(axis=1)
@@ -141,16 +190,33 @@ averages.columns = ['both', 'nsga3_only', 'custom_only', 'none']
 
 print(str(averages) + "\n")
 
-customAverages = confidences[customConfidenceNames]
-nsga3Averages = confidences[nsga3ConfidenceNames]
+#predicted successful adaptations
+nsga3PredictedSuccessful = (confidences[nsga3ConfidenceNames] > targetConfidence).all(axis=1)
+customPredictedSuccessful = (confidences[customConfidenceNames] > targetConfidence).all(axis=1)
 
-print("nsga3 mean:  " + str(nsga3Averages.mean(axis=1).mean()))
-print("nsga3:  " + str(nsga3Averages.mean()) + "\n")
-print("custom mean:  " + str(customAverages.mean(axis=1).mean()))
-print("custom: " + str(customAverages.mean()) + "\n")
+print("nsga3 predicted success rate: " + "{:.2%}".format(nsga3PredictedSuccessful.sum() / nsga3PredictedSuccessful.shape[0]))
+print(str(nsga3Confidences.mean()) + "\n")
+print("custom predicted success rate:  " + "{:.2%}".format(customPredictedSuccessful.sum() / customPredictedSuccessful.shape[0]))
+print(str(customConfidences.mean()) + "\n")
 
-nsga3Succesful = (confidences[nsga3ConfidenceNames] > targetConfidence).all(axis=1)
-customSuccesful = (confidences[customConfidenceNames] > targetConfidence).all(axis=1)
+print("nsga3 predicted success mean probas: \n" + str(nsga3Confidences[nsga3PredictedSuccessful].mean()) + '\n')
+print("custom predicted success mean probas: \n" + str(customConfidences[customPredictedSuccessful].mean()) + '\n')
 
-print("nsga3 succeful: \n" + str(nsga3Averages[nsga3Succesful].mean()))
-print("custom succeful: \n" + str(customAverages[customSuccesful].mean()))
+#predicted successful adaptations
+nsga3Successful = outcomes[nsga3OutcomeNames].all(axis=1)
+customSuccessful = outcomes[customOutcomeNames].all(axis=1)
+
+nsga3SuccessRate = nsga3Successful.sum() / nsga3Successful.shape[0]
+customSuccessRate = customSuccessful.sum() / customSuccessful.shape[0]
+
+#outcomes analysis
+print("nsga3 success rate: " + "{:.2%}".format(nsga3SuccessRate))
+print(str(outcomes[nsga3OutcomeNames].mean()) + "\n")
+print("custom success rate:  " + "{:.2%}".format(customSuccessRate))
+print(str(outcomes[customOutcomeNames].mean()) + "\n")
+
+successRate = pd.concat([outcomes[nsga3OutcomeNames].rename(columns=dict(zip(nsga3OutcomeNames, reqs))).mean(),
+                        outcomes[customOutcomeNames].rename(columns=dict(zip(customOutcomeNames, reqs))).mean()], axis=1)
+successRate.columns = ['nsga3', 'custom']
+
+personalizedBarChart(successRate, "Success Rate", plotPath)
