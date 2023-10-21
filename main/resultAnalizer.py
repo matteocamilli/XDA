@@ -73,7 +73,7 @@ def personalizedBoxPlot(data, name, rotation=0):
 os.chdir(sys.path[0])
 evaluate = False
 
-pathToResults = '../results/req3/'
+pathToResults = '../results/1ss/allReqs/'
 
 featureNames = ["cruise speed",
                     "image resolution",
@@ -128,9 +128,9 @@ personalizedBoxPlot(times, "Execution time comparison")
 
 #mapping
 bothSuccesful = pd.concat([confidences[nsga3ConfidenceNames] > targetConfidence, confidences[customConfidenceNames] > targetConfidence], axis=1).all(axis=1)
-onlyNsga3Succesful = pd.concat([confidences[nsga3ConfidenceNames] > targetConfidence, confidences[customConfidenceNames] <= targetConfidence], axis=1).all(axis=1)
-onlyCustomSuccesful = pd.concat([confidences[nsga3ConfidenceNames] <= targetConfidence, confidences[customConfidenceNames] > targetConfidence], axis=1).all(axis=1)
-noneSuccesful = pd.concat([confidences[nsga3ConfidenceNames] <= targetConfidence, confidences[customConfidenceNames] <= targetConfidence], axis=1).all(axis=1)
+onlyNsga3Succesful = pd.concat([confidences[nsga3ConfidenceNames] > targetConfidence, (confidences[customConfidenceNames] <= targetConfidence).any(axis=1)], axis=1).all(axis=1)
+onlyCustomSuccesful = pd.concat([(confidences[nsga3ConfidenceNames] <= targetConfidence).any(axis=1), confidences[customConfidenceNames] > targetConfidence], axis=1).all(axis=1)
+noneSuccesful = pd.concat([(confidences[nsga3ConfidenceNames] <= targetConfidence).any(axis=1), (confidences[customConfidenceNames] <= targetConfidence).any(axis=1)], axis=1).all(axis=1)
 
 #results
 averages = pd.concat([outcomes[bothSuccesful].mean(),
@@ -139,4 +139,18 @@ averages = pd.concat([outcomes[bothSuccesful].mean(),
                       outcomes[noneSuccesful].mean()], axis=1)
 averages.columns = ['both', 'nsga3_only', 'custom_only', 'none']
 
-print(averages)
+print(str(averages) + "\n")
+
+customAverages = confidences[customConfidenceNames]
+nsga3Averages = confidences[nsga3ConfidenceNames]
+
+print("nsga3 mean:  " + str(nsga3Averages.mean(axis=1).mean()))
+print("nsga3:  " + str(nsga3Averages.mean()) + "\n")
+print("custom mean:  " + str(customAverages.mean(axis=1).mean()))
+print("custom: " + str(customAverages.mean()) + "\n")
+
+nsga3Succesful = (confidences[nsga3ConfidenceNames] > targetConfidence).all(axis=1)
+customSuccesful = (confidences[customConfidenceNames] > targetConfidence).all(axis=1)
+
+print("nsga3 succeful: \n" + str(nsga3Averages[nsga3Succesful].mean()))
+print("custom succeful: \n" + str(customAverages[customSuccesful].mean()))
