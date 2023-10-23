@@ -8,7 +8,7 @@ from matplotlib import ticker
 from util import readFromCsv, evaluateAdaptations
 
 
-def personalizedBoxPlot(data, name, columnNames=None, rotation=0, path=None):
+def personalizedBoxPlot(data, name, columnNames=None, rotation=0, path=None, show=False):
     columns = data.columns
     nColumns = len(columns)
     fig = plt.figure()#plt.figure(figsize=(10, 10 * nColumns/2))
@@ -90,9 +90,12 @@ def personalizedBoxPlot(data, name, columnNames=None, rotation=0, path=None):
     if path is not None:
         plt.savefig(path + name)
 
-    fig.show()
+    if show:
+        fig.show()
+    else:
+        plt.clf()
 
-def personalizedBarChart(data, name, path=None):
+def personalizedBarChart(data, name, path=None, show=False):
     colors = plt.cm.Spectral(np.linspace(.1, .9, 2))
     # colors = np.append(colors[0::2], colors[1::2], axis=0)
     c = np.copy(colors)
@@ -101,22 +104,28 @@ def personalizedBarChart(data, name, path=None):
 
     colors = c
 
-    data.plot.bar(title=name, color=colors)
+    ax = data.plot.bar(title=name, color=colors)
 
     if len(data.index) > 1:
         plt.xticks(rotation=0)
     else:
         plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
 
+    ax.set_ylim(0, 1)
+    ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0, decimals=0))
+
     if path is not None:
         plt.savefig(path + name)
 
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.clf()
 
 os.chdir(sys.path[0])
 evaluate = False
 
-pathToResults = '../results/1ss/allReqs/'
+pathToResults = '../results/1ss/req3/'
 
 featureNames = ["cruise speed",
                     "image resolution",
@@ -175,21 +184,6 @@ personalizedBoxPlot(confidences, "Confidences comparison", reqs, path=plotPath)
 personalizedBoxPlot(scores, "Score comparison", path=plotPath)
 personalizedBoxPlot(times, "Execution time comparison", path=plotPath)
 
-#mapping
-bothSuccesful = pd.concat([confidences[nsga3ConfidenceNames] > targetConfidence, confidences[customConfidenceNames] > targetConfidence], axis=1).all(axis=1)
-onlyNsga3Succesful = pd.concat([confidences[nsga3ConfidenceNames] > targetConfidence, (confidences[customConfidenceNames] <= targetConfidence).any(axis=1)], axis=1).all(axis=1)
-onlyCustomSuccesful = pd.concat([(confidences[nsga3ConfidenceNames] <= targetConfidence).any(axis=1), confidences[customConfidenceNames] > targetConfidence], axis=1).all(axis=1)
-noneSuccesful = pd.concat([(confidences[nsga3ConfidenceNames] <= targetConfidence).any(axis=1), (confidences[customConfidenceNames] <= targetConfidence).any(axis=1)], axis=1).all(axis=1)
-
-#results
-averages = pd.concat([outcomes[bothSuccesful].mean(),
-                      outcomes[onlyNsga3Succesful].mean(),
-                      outcomes[onlyCustomSuccesful].mean(),
-                      outcomes[noneSuccesful].mean()], axis=1)
-averages.columns = ['both', 'nsga3_only', 'custom_only', 'none']
-
-print(str(averages) + "\n")
-
 #predicted successful adaptations
 nsga3PredictedSuccessful = (confidences[nsga3ConfidenceNames] > targetConfidence).all(axis=1)
 customPredictedSuccessful = (confidences[customConfidenceNames] > targetConfidence).all(axis=1)
@@ -199,15 +193,15 @@ print(str(nsga3Confidences.mean()) + "\n")
 print("custom predicted success rate:  " + "{:.2%}".format(customPredictedSuccessful.sum() / customPredictedSuccessful.shape[0]))
 print(str(customConfidences.mean()) + "\n")
 
-print("nsga3 predicted success mean probas: \n" + str(nsga3Confidences[nsga3PredictedSuccessful].mean()) + '\n')
-print("custom predicted success mean probas: \n" + str(customConfidences[customPredictedSuccessful].mean()) + '\n')
+print("nsga3 mean probas of predicted success: \n" + str(nsga3Confidences[nsga3PredictedSuccessful].mean()) + '\n')
+print("custom mean probas of predicted success: \n" + str(customConfidences[customPredictedSuccessful].mean()) + '\n')
 
 #predicted successful adaptations
 nsga3Successful = outcomes[nsga3OutcomeNames].all(axis=1)
 customSuccessful = outcomes[customOutcomeNames].all(axis=1)
 
-nsga3SuccessRate = nsga3Successful.sum() / nsga3Successful.shape[0]
-customSuccessRate = customSuccessful.sum() / customSuccessful.shape[0]
+nsga3SuccessRate = nsga3Successful.mean()
+customSuccessRate = customSuccessful.mean()
 
 #outcomes analysis
 print("nsga3 success rate: " + "{:.2%}".format(nsga3SuccessRate))
@@ -215,8 +209,15 @@ print(str(outcomes[nsga3OutcomeNames].mean()) + "\n")
 print("custom success rate:  " + "{:.2%}".format(customSuccessRate))
 print(str(outcomes[customOutcomeNames].mean()) + "\n")
 
-successRate = pd.concat([outcomes[nsga3OutcomeNames].rename(columns=dict(zip(nsga3OutcomeNames, reqs))).mean(),
-                        outcomes[customOutcomeNames].rename(columns=dict(zip(customOutcomeNames, reqs))).mean()], axis=1)
-successRate.columns = ['nsga3', 'custom']
+successRateIndividual = pd.concat([outcomes[nsga3OutcomeNames].rename(columns=dict(zip(nsga3OutcomeNames, reqs))).mean(),
+                                   outcomes[customOutcomeNames].rename(columns=dict(zip(customOutcomeNames, reqs))).mean()], axis=1)
+successRateIndividual.columns = ['nsga3', 'custom']
+personalizedBarChart(successRateIndividual, "Success Rate Individual Reqs", plotPath)
 
+successRate = pd.DataFrame([[nsga3SuccessRate, customSuccessRate]], columns=["nsga3", "custom"])
 personalizedBarChart(successRate, "Success Rate", plotPath)
+
+successRateOfPredictedSuccess = pd.DataFrame([[outcomes[nsga3OutcomeNames][nsga3PredictedSuccessful].all(axis=1).mean(),
+                                               outcomes[customOutcomeNames][customPredictedSuccessful].all(axis=1).mean()]],
+                                               columns=["nsga3", "custom"])
+personalizedBarChart(successRateOfPredictedSuccess, "Success Rate of Predicted Success", plotPath)
