@@ -8,7 +8,7 @@ from matplotlib import ticker
 from util import readFromCsv, evaluateAdaptations
 
 
-def personalizedBoxPlot(data, name, columnNames=None, rotation=0, path=None, show=False):
+def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=None, show=False):
     columns = data.columns
     nColumns = len(columns)
     fig = plt.figure()#plt.figure(figsize=(10, 10 * nColumns/2))
@@ -55,11 +55,13 @@ def personalizedBoxPlot(data, name, columnNames=None, rotation=0, path=None, sho
                   alpha=0.5)
 
     # x-axis labels
-
-    if columnNames is not None:
-        ax1.xaxis.set_ticks(np.arange(1.5, len(columnNames) * 2, step=2), columnNames, rotation=rotation)
+    if columnNames is not None and len(columnNames) > 1:
+        ax1.xaxis.set_ticks(np.arange(1.5, len(columnNames) * 2, step=2), columnNames)
     else:
         plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+
+    # y-axis
+    ax1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0, decimals=0))
 
     #legend
     box = ax1.get_position()
@@ -114,6 +116,9 @@ def personalizedBarChart(data, name, path=None, show=False):
     ax.set_ylim(0, 1)
     ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0, decimals=0))
 
+    for container in ax.containers:
+        ax.bar_label(container, fmt=f"{container.datavalues[0] * 100:.2f}%%")
+
     if path is not None:
         plt.savefig(path + name)
 
@@ -125,7 +130,7 @@ def personalizedBarChart(data, name, path=None, show=False):
 os.chdir(sys.path[0])
 evaluate = False
 
-pathToResults = '../results/1ss/req3/'
+pathToResults = '../results/10ss/req3/'
 
 featureNames = ["cruise speed",
                     "image resolution",
