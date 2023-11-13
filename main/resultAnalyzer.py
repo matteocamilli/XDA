@@ -8,7 +8,7 @@ from matplotlib import ticker
 from util import readFromCsv, evaluateAdaptations
 
 
-def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=None, show=False):
+def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=None, show=False, seconds=False):
     columns = data.columns
     nColumns = len(columns)
     fig = plt.figure()#plt.figure(figsize=(10, 10 * nColumns/2))
@@ -63,6 +63,10 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
     # y-axis
     if percentage:
         ax1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0, decimals=0))
+    if seconds:
+        def y_fmt(x, y):
+            return str(int(x)) + ' s'
+        ax1.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
 
     #legend
     box = ax1.get_position()
@@ -118,7 +122,7 @@ def personalizedBarChart(data, name, path=None, show=False):
     ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0, decimals=0))
 
     for container in ax.containers:
-        ax.bar_label(container, fmt=f"{container.datavalues[0] * 100:.2f}%")
+        ax.bar_label(container, fmt=f"{container.datavalues[0] * 100:.1f}%", fontsize=7)
 
     if path is not None:
         plt.savefig(path + name)
@@ -188,7 +192,7 @@ if not os.path.exists(plotPath):
 
 personalizedBoxPlot(confidences, "Confidences comparison", reqs, path=plotPath, percentage=True)
 personalizedBoxPlot(scores, "Score comparison", path=plotPath)
-personalizedBoxPlot(times, "Execution time comparison", path=plotPath)
+personalizedBoxPlot(times, "Execution time comparison", path=plotPath, seconds=True)
 
 #predicted successful adaptations
 nsga3PredictedSuccessful = (confidences[nsga3ConfidenceNames] > targetConfidence).all(axis=1)
@@ -196,7 +200,7 @@ customPredictedSuccessful = (confidences[customConfidenceNames] > targetConfiden
 
 personalizedBoxPlot(confidences[nsga3PredictedSuccessful], "Confidences comparison on NSGA-III predicted success", reqs, path=plotPath, percentage=True)
 personalizedBoxPlot(scores[nsga3PredictedSuccessful], "Score comparison on NSGA-III predicted success", path=plotPath)
-personalizedBoxPlot(times[nsga3PredictedSuccessful], "Execution time comparison on NSGA-III predicted success", path=plotPath)
+personalizedBoxPlot(times[nsga3PredictedSuccessful], "Execution time comparison on NSGA-III predicted success", path=plotPath, seconds=True)
 
 print("NSGA-III predicted success rate: " + "{:.2%}".format(nsga3PredictedSuccessful.sum() / nsga3PredictedSuccessful.shape[0]))
 print(str(nsga3Confidences.mean()) + "\n")
