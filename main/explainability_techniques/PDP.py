@@ -5,7 +5,7 @@ import copy
 
 
 def partialDependencePlot(model, X_train, features, kind, path=None):
-    pdp = ins.PartialDependenceDisplay.from_estimator(model, X_train, features, kind=kind, percentiles=[0, 1])
+    pdp = ins.PartialDependenceDisplay.from_estimator(model, X_train, features, kind=kind, percentiles=(0, 1))
     plt.tight_layout()
     if path is not None:
         plt.savefig(path)

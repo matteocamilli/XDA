@@ -61,7 +61,7 @@ def constructModel(X_train, X_test, y_train, y_test, export=False):
     model_performance_df['AUC'] = model_performance_df.AUC.astype(float)
     model_performance_df = model_performance_df.sort_values(by=['AUC'], ascending=False)
 
-    bestModel = model_performance_df.iloc[0][0]
+    bestModel = model_performance_df.iloc[0].iloc[0]
 
     print(model_performance_df)
     print('Best model is: ' + bestModel)

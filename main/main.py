@@ -52,7 +52,7 @@ if __name__ == '__main__':
     # establishes if the controllable features must be minimized (-1) or maximized (1)
     optimizationDirections = [1, -1, -1, -1]
 
-    reqs = ["req_0", "req_1", "req_2", "req_3"]
+    reqs = ["req_0"]#, "req_1", "req_2", "req_3"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
@@ -85,7 +85,8 @@ if __name__ == '__main__':
                                   controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
                                   optimizationDirections, optimizationScore, 1, "../plots")
 
-    nsga3Planner = NSGA3Planner(models, targetConfidence, successScore, optimizationScore)
+    nsga3Planner = NSGA3Planner(models, targetConfidence, [0, 1, 2, 3], controllableFeatureDomains,
+                                optimizationDirections, successScore, optimizationScore)
 
     # create lime explainer
     limeExplainer = lime.createLimeExplainer(X_train)

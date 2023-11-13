@@ -9,17 +9,18 @@ from util import vecPredictProba
 
 
 class NSGA3Planner:
-    def __init__(self, reqClassifiers, targetConfidence, successScoreFunction, optimizationScoreFunction):
+    def __init__(self, reqClassifiers, targetConfidence, controllableFeatureIndices, controllableFeatureDomains,
+                 optimizationDirections, successScoreFunction, optimizationScoreFunction):
         self.reqClassifiers = reqClassifiers
         self.targetConfidence = targetConfidence
         self.successScoreFunction = successScoreFunction
         self.optimizationScoreFunction = optimizationScoreFunction
 
         # create the reference directions to be used for the optimization
-        ref_dirs = get_reference_directions("das-dennis", 4, n_partitions=12)
+        ref_dirs = get_reference_directions("das-dennis", len(controllableFeatureIndices), n_partitions=12)
 
         # create the algorithm object
-        self.algorithm = NSGA3(pop_size=455, ref_dirs=ref_dirs)
+        self.algorithm = NSGA3(ref_dirs=ref_dirs)
 
         self.termination = DefaultMultiObjectiveTermination(
             cvtol=1e-6,
@@ -27,8 +28,10 @@ class NSGA3Planner:
             n_max_gen=1000
         )
 
+        print(self.algorithm.pop_size)
         # create problem instance
-        self.problem = Adaptation(reqClassifiers, targetConfidence, 455, [])
+        self.problem = Adaptation(reqClassifiers, targetConfidence, self.algorithm.pop_size, controllableFeatureIndices,
+                                  controllableFeatureDomains, optimizationDirections)
 
     def findAdaptation(self, externalFeatures):
         # set problem
@@ -72,19 +75,27 @@ class Adaptation(Problem):
     def externalFeatures(self, externalFeatures):
         self._externalFeatures = np.repeat([externalFeatures], self.popSize, axis=0)
 
-    def __init__(self, models, targetConfidence, popSize, externalFeatures):
-        super().__init__(n_var=4, n_obj=4, n_constr=len(models), xl=0.0, xu=100.0)
+    def __init__(self, models, targetConfidence, popSize, controllableFeatureIndices, controllableFeatureDomains,
+                 optimizationDirections):
+        super().__init__(n_var=len(controllableFeatureIndices), n_obj=len(controllableFeatureIndices),
+                         n_constr=len(models), xl=controllableFeatureDomains[:, 0], xu=controllableFeatureDomains[:, 1])
         self.models = models
         self.targetConfidence = np.repeat([targetConfidence], popSize, axis=0)
+        self.controllableFeatureIndices = controllableFeatureIndices
+        self.optimizationDirections = optimizationDirections
         self.popSize = popSize
-        self.externalFeatures = externalFeatures
+        self.externalFeatures = []
 
     def _evaluate(self, x, out, *args, **kwargs):
-        xFull = np.append(x, self.externalFeatures, axis=1)
         f1 = -x[:, 0]
         f2 = x[:, 1]
         f3 = x[:, 2]
         f4 = x[:, 3]
+
+        xFull = np.empty((self.popSize, self.n_var + self.externalFeatures.shape[1]))
+        xFull[:, self.controllableFeatureIndices] = x
+        externalFeatureIndices = np.arange(xFull.shape[1]) - self.controllableFeatureIndices
+        xFull[externalFeatureIndices] = self.externalFeatures
 
         out["F"] = [f1, f2, f3, f4]
         out["G"] = [self.targetConfidence - vecPredictProba(self.models, xFull)]
