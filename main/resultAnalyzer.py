@@ -62,7 +62,10 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
 
     # y-axis
     if percentage:
-        ax1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0, decimals=1))
+        ax1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0, decimals=0))
+
+        if (data.max().max() - data.min().min())/8 < 0.01:
+            ax1.yaxis.set_major_locator(ticker.MultipleLocator(0.01))
     if seconds:
         def y_fmt(x, y):
             return str(int(x)) + ' s'
