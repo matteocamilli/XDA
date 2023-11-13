@@ -68,7 +68,7 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
     box = ax1.get_position()
     ax1.set_position([box.x0, box.y0 + box.height * 0.1,
                      box.width, box.height * 0.9])
-    ax1.legend([bp["boxes"][0], bp["boxes"][1]], ["nsga3", "custom"],
+    ax1.legend([bp["boxes"][0], bp["boxes"][1]], ["NSGA-III", "custom"],
                ncol=2, loc='upper center', bbox_to_anchor=(0.5, -0.1))
 
     # Adding title
@@ -194,12 +194,16 @@ personalizedBoxPlot(times, "Execution time comparison", path=plotPath)
 nsga3PredictedSuccessful = (confidences[nsga3ConfidenceNames] > targetConfidence).all(axis=1)
 customPredictedSuccessful = (confidences[customConfidenceNames] > targetConfidence).all(axis=1)
 
-print("nsga3 predicted success rate: " + "{:.2%}".format(nsga3PredictedSuccessful.sum() / nsga3PredictedSuccessful.shape[0]))
+personalizedBoxPlot(confidences[nsga3PredictedSuccessful], "Confidences comparison on NSGA-III predicted success", reqs, path=plotPath, percentage=True)
+personalizedBoxPlot(scores[nsga3PredictedSuccessful], "Score comparison on NSGA-III predicted success", path=plotPath)
+personalizedBoxPlot(times[nsga3PredictedSuccessful], "Execution time comparison on NSGA-III predicted success", path=plotPath)
+
+print("NSGA-III predicted success rate: " + "{:.2%}".format(nsga3PredictedSuccessful.sum() / nsga3PredictedSuccessful.shape[0]))
 print(str(nsga3Confidences.mean()) + "\n")
 print("custom predicted success rate:  " + "{:.2%}".format(customPredictedSuccessful.sum() / customPredictedSuccessful.shape[0]))
 print(str(customConfidences.mean()) + "\n")
 
-print("nsga3 mean probas of predicted success: \n" + str(nsga3Confidences[nsga3PredictedSuccessful].mean()) + '\n')
+print("NSGA-III mean probas of predicted success: \n" + str(nsga3Confidences[nsga3PredictedSuccessful].mean()) + '\n')
 print("custom mean probas of predicted success: \n" + str(customConfidences[customPredictedSuccessful].mean()) + '\n')
 
 #predicted successful adaptations
@@ -210,20 +214,20 @@ nsga3SuccessRate = nsga3Successful.mean()
 customSuccessRate = customSuccessful.mean()
 
 #outcomes analysis
-print("nsga3 success rate: " + "{:.2%}".format(nsga3SuccessRate))
+print("NSGA-III success rate: " + "{:.2%}".format(nsga3SuccessRate))
 print(str(outcomes[nsga3OutcomeNames].mean()) + "\n")
 print("custom success rate:  " + "{:.2%}".format(customSuccessRate))
 print(str(outcomes[customOutcomeNames].mean()) + "\n")
 
 successRateIndividual = pd.concat([outcomes[nsga3OutcomeNames].rename(columns=dict(zip(nsga3OutcomeNames, reqs))).mean(),
                                    outcomes[customOutcomeNames].rename(columns=dict(zip(customOutcomeNames, reqs))).mean()], axis=1)
-successRateIndividual.columns = ['nsga3', 'custom']
+successRateIndividual.columns = ['NSGA-III', 'custom']
 personalizedBarChart(successRateIndividual, "Success Rate Individual Reqs", plotPath)
 
-successRate = pd.DataFrame([[nsga3SuccessRate, customSuccessRate]], columns=["nsga3", "custom"])
+successRate = pd.DataFrame([[nsga3SuccessRate, customSuccessRate]], columns=["NSGA-III", "custom"])
 personalizedBarChart(successRate, "Success Rate", plotPath)
 
 successRateOfPredictedSuccess = pd.DataFrame([[outcomes[nsga3OutcomeNames][nsga3PredictedSuccessful].all(axis=1).mean(),
                                                outcomes[customOutcomeNames][customPredictedSuccessful].all(axis=1).mean()]],
-                                               columns=["nsga3", "custom"])
+                                               columns=["NSGA-III", "custom"])
 personalizedBarChart(successRateOfPredictedSuccess, "Success Rate of Predicted Success", plotPath)
