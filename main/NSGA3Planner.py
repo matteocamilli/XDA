@@ -87,15 +87,10 @@ class Adaptation(Problem):
         self.externalFeatures = []
 
     def _evaluate(self, x, out, *args, **kwargs):
-        f1 = -x[:, 0]
-        f2 = x[:, 1]
-        f3 = x[:, 2]
-        f4 = x[:, 3]
-
         xFull = np.empty((self.popSize, self.n_var + self.externalFeatures.shape[1]))
         xFull[:, self.controllableFeatureIndices] = x
-        externalFeatureIndices = np.arange(xFull.shape[1]) - self.controllableFeatureIndices
-        xFull[externalFeatureIndices] = self.externalFeatures
+        externalFeatureIndices = np.delete(np.arange(xFull.shape[1]), self.controllableFeatureIndices)
+        xFull[:, externalFeatureIndices] = self.externalFeatures
 
-        out["F"] = [f1, f2, f3, f4]
+        out["F"] = [-self.optimizationDirections[i] * x[:, i] for i in range(x.shape[1])]
         out["G"] = [self.targetConfidence - vecPredictProba(self.models, xFull)]
