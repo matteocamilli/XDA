@@ -122,7 +122,14 @@ def personalizedBarChart(data, name, path=None, show=False):
     ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0, decimals=0))
 
     for container in ax.containers:
-        ax.bar_label(container, fmt=f"{container.datavalues[0] * 100:.1f}%", fontsize=7)
+        ax.bar_label(container, ['{:.1%}'.format(v) for v in container.datavalues], fontsize=7)
+
+    """
+    for rect in ax.patches:
+    ax.text(rect.get_x() + rect.get_width() / 2, rect.get_height() + 5,
+            f"{rect.get_height() * 100:.1f}%", fontsize=7,
+            ha='center', va='bottom')
+    """
 
     if path is not None:
         plt.savefig(path + name)
@@ -135,17 +142,17 @@ def personalizedBarChart(data, name, path=None, show=False):
 os.chdir(sys.path[0])
 evaluate = False
 
-pathToResults = sys.argv[1]#'../results/10ss/req3/'
+pathToResults = sys.argv[1]
 
 featureNames = ["cruise speed",
-                    "image resolution",
-                    "illuminance",
-                    "controls responsiveness",
-                    "power",
-                    "smoke intensity",
-                    "obstacle size",
-                    "obstacle distance",
-                    "firm obstacle"]
+                "image resolution",
+                "illuminance",
+                "controls responsiveness",
+                "power",
+                "smoke intensity",
+                "obstacle size",
+                "obstacle distance",
+                "firm obstacle"]
 
 reqs = ["req_0", "req_1", "req_2", "req_3"]
 
