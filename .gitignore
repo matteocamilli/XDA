@@ -3,4 +3,3 @@ venv
 .idea
 
 MDP_Dataset_Builder/*.csv
-plots/*
