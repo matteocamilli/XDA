@@ -1,4 +1,6 @@
 import os
+import time
+
 import numpy as np
 import explainability_techniques.PDP as pdp
 from sklearn.neighbors import KNeighborsClassifier
@@ -32,6 +34,9 @@ class CustomPlanner:
         knn.fit(X.values, np.zeros((X.shape[0],)))
         self.knn = knn
 
+        #TODO take execution times
+        #startTime = time.time()
+
         # make pdps
         self.pdps = {}
         for i, feature in enumerate(controllableFeaturesNames):
@@ -53,6 +58,10 @@ class CustomPlanner:
                 if not os.path.exists(path):
                     os.makedirs(path)
             self.summaryPdps.append(pdp.multiplyPdps(self.pdps[i], path + "/" + feature + ".png"))
+
+        # TODO take execution times
+        #endTime = time.time()
+        #print("PDP building time: " + str(endTime - startTime))
 
     def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures, tempExcludedFeatures):
         # select a feature to modify

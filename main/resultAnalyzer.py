@@ -1,5 +1,7 @@
 import os
 import sys
+
+import matplotlib
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -8,7 +10,13 @@ from matplotlib import ticker
 from util import readFromCsv, evaluateAdaptations
 
 
-def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=None, show=False, seconds=False):
+font = {'family' : 'sans',
+        'weight' : 'normal',
+        'size'   : 12}
+
+matplotlib.rc('font', **font)
+
+def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=None, show=False, seconds=False, legendInside=False):
     columns = data.columns
     nColumns = len(columns)
     fig = plt.figure()#plt.figure(figsize=(10, 10 * nColumns/2))
@@ -75,8 +83,11 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
     box = ax1.get_position()
     ax1.set_position([box.x0, box.y0 + box.height * 0.1,
                      box.width, box.height * 0.9])
-    ax1.legend([bp["boxes"][0], bp["boxes"][1]], ["NSGA-III", "XDA"],
-               ncol=2, loc='upper center', bbox_to_anchor=(0.5, -0.1))
+    if legendInside:
+        ax1.legend([bp["boxes"][0], bp["boxes"][1]], ["NSGA-III", "XDA"],)
+    else:
+        ax1.legend([bp["boxes"][0], bp["boxes"][1]], ["NSGA-III", "XDA"],
+                   ncol=2, loc='upper center', bbox_to_anchor=(0.5, -0.1))
 
     # Adding title
     plt.title(name)
@@ -129,8 +140,8 @@ def personalizedBarChart(data, name, path=None, show=False, percentage=False):
         if percentage:
             values = ['{:.1%}'.format(v) for v in container.datavalues]
         else:
-            values = ['{:.3}'.format(v) for v in container.datavalues]
-        ax.bar_label(container, values, fontsize=7)
+            values = ['{:.2}'.format(v) for v in container.datavalues]
+        ax.bar_label(container, values, fontsize=10)
 
     """
     for rect in ax.patches:
@@ -163,6 +174,7 @@ featureNames = ["cruise speed",
                 "firm obstacle"]
 
 reqs = ["req_0", "req_1", "req_2", "req_3"]
+reqsNamesInGraphs = ["R1", "R2", "R3", "R4"]
 
 # read dataframe from csv
 results = readFromCsv(pathToResults + 'results.csv')
@@ -205,17 +217,17 @@ plotPath = pathToResults + 'plots/'
 if not os.path.exists(plotPath):
     os.makedirs(plotPath)
 
-personalizedBoxPlot(confidences, "Confidences comparison", reqs, path=plotPath, percentage=False)
+personalizedBoxPlot(confidences, "Confidences comparison", reqsNamesInGraphs, path=plotPath, percentage=False)
 personalizedBoxPlot(scores, "Score comparison", path=plotPath)
-personalizedBoxPlot(times, "Execution time comparison", path=plotPath, seconds=True)
+personalizedBoxPlot(times, "Execution time comparison", path=plotPath, seconds=True, legendInside=True)
 
 #predicted successful adaptations
 nsga3PredictedSuccessful = (confidences[nsga3ConfidenceNames] > targetConfidence).all(axis=1)
 customPredictedSuccessful = (confidences[customConfidenceNames] > targetConfidence).all(axis=1)
 
-personalizedBoxPlot(confidences[nsga3PredictedSuccessful], "Confidences comparison on NSGA-III predicted success", reqs, path=plotPath, percentage=False)
+personalizedBoxPlot(confidences[nsga3PredictedSuccessful], "Confidences comparison on NSGA-III predicted success", reqsNamesInGraphs, path=plotPath, percentage=False)
 personalizedBoxPlot(scores[nsga3PredictedSuccessful], "Score comparison on NSGA-III predicted success", path=plotPath)
-personalizedBoxPlot(times[nsga3PredictedSuccessful], "Execution time comparison on NSGA-III predicted success", path=plotPath, seconds=True)
+personalizedBoxPlot(times[nsga3PredictedSuccessful], "Execution time comparison on NSGA-III predicted success", path=plotPath, seconds=True, legendInside=True)
 
 print("NSGA-III predicted success rate: " + "{:.2%}".format(nsga3PredictedSuccessful.sum() / nsga3PredictedSuccessful.shape[0]))
 print(str(nsga3Confidences.mean()) + "\n")
@@ -238,8 +250,8 @@ print(str(outcomes[nsga3OutcomeNames].mean()) + "\n")
 print("XDA success rate:  " + "{:.2%}".format(customSuccessRate))
 print(str(outcomes[customOutcomeNames].mean()) + "\n")
 
-successRateIndividual = pd.concat([outcomes[nsga3OutcomeNames].rename(columns=dict(zip(nsga3OutcomeNames, reqs))).mean(),
-                                   outcomes[customOutcomeNames].rename(columns=dict(zip(customOutcomeNames, reqs))).mean()], axis=1)
+successRateIndividual = pd.concat([outcomes[nsga3OutcomeNames].rename(columns=dict(zip(nsga3OutcomeNames, reqsNamesInGraphs))).mean(),
+                                   outcomes[customOutcomeNames].rename(columns=dict(zip(customOutcomeNames, reqsNamesInGraphs))).mean()], axis=1)
 successRateIndividual.columns = ['NSGA-III', 'XDA']
 personalizedBarChart(successRateIndividual, "Success Rate Individual Reqs", plotPath)
 

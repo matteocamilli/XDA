@@ -1,8 +1,15 @@
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import sklearn.inspection as ins
 import copy
 
+
+font = {'family' : 'sans',
+        'weight' : 'normal',
+        'size'   : 12}
+
+matplotlib.rc('font', **font)
 
 def partialDependencePlot(model, X_train, features, kind, path=None):
     pdp = ins.PartialDependenceDisplay.from_estimator(model, X_train, features, kind=kind, percentiles=(0, 1))
