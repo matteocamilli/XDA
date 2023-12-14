@@ -3,7 +3,6 @@ import os
 import glob
 import time
 import warnings
-import random
 import pandas as pd
 import numpy as np
 from colorama import Fore, Style
@@ -23,6 +22,11 @@ def successScore(adaptation, reqClassifiers, targetSuccessProba):
 # provided optimization score function (based on the ideal controllable feature assignment)
 def optimizationScore(adaptation):
     return 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
+
+# ====================================================================================================== #
+# IMPORTANT: everything named as custom in the code refers to the XDA approach                           #
+#            everything named as confidence in the code refers to the predicted probabilities of success #
+# ====================================================================================================== #
 
 
 if __name__ == '__main__':
@@ -49,14 +53,16 @@ if __name__ == '__main__':
     controllableFeaturesNames = featureNames[0:4]
     externalFeaturesNames = featureNames[4:9]
 
-    # establishes if the controllable features must be minimized (-1) or maximized (1)
+    # for simplicity, we consider all the ideal points to be 0 or 100
+    # so that we just need to consider ideal directions instead
+    # -1 => minimize, 1 => maximize
     optimizationDirections = [1, -1, -1, -1]
 
     reqs = ["req_0", "req_1", "req_2", "req_3"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
-    n_startingSolutions = 2
+    n_startingSolutions = 10
     n_controllableFeatures = len(controllableFeaturesNames)
 
     targetConfidence = np.full((1, n_reqs), 0.8)[0]
@@ -83,7 +89,7 @@ if __name__ == '__main__':
     # initialize planners
     customPlanner = CustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
                                   controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
-                                  optimizationDirections, optimizationScore, 1, "../plots")
+                                  optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
     nsga3Planner = NSGA3Planner(models, targetConfidence, [0, 1, 2, 3], controllableFeatureDomains,
                                 optimizationDirections, successScore, optimizationScore)
@@ -103,7 +109,7 @@ if __name__ == '__main__':
     customDataset = []
     nsga3Dataset = []
 
-    path = "../plots/adaptations"
+    path = "../explainability_plots/adaptations"
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -111,10 +117,9 @@ if __name__ == '__main__':
     for f in files:
         os.remove(f)
 
-    testNum = 2
+    testNum = 200
     for k in range(1, testNum + 1):
-        random.seed()
-        rowIndex = k - 1  # random.randrange(0, X_test.shape[0])
+        rowIndex = k - 1
         row = X_test.iloc[rowIndex, :].to_numpy()
 
         print(Fore.BLUE + "Test " + str(k) + ":" + Style.RESET_ALL)

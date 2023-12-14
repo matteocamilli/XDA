@@ -3,7 +3,7 @@ import argparse
 MAX_SAMPLES = None  # 1000
 INDEX_TO_RUN = None  # 0
 TOTAL_TO_RUN = None  # 1
-PATH_TO_DATASET = None # "./starting_combinations.npy"
+PATH_TO_DATASET = None  # "./starting_combinations.npy"
 
 SS_VARIABLES = {
     "cruise speed": {"domain": float, "range": [0, 100]},
@@ -84,7 +84,7 @@ CONSTRAINTS = [
 
 all_args = argparse.ArgumentParser()
 
-all_args.add_argument("-m", "--max-samples", required=False, help="Max Samples to generate", type=int)
+all_args.add_argument("-m", "--max-samples", required=False, help="Max Samples to generate", type=int, nargs="?")
 all_args.add_argument("-i", "--index-to-run", required=False, help="Index of this execution", type=int)
 all_args.add_argument("-t", "--total-executions", required=False, help="Index of this execution", type=int)
 all_args.add_argument("-p", "--path-to-dataset", required=False, help="Path to the dataset", type=str)

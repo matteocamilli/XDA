@@ -4,7 +4,6 @@ from pymoo.algorithms.moo.nsga3 import NSGA3
 from pymoo.optimize import minimize
 from pymoo.util.ref_dirs import get_reference_directions
 from pymoo.termination.default import DefaultMultiObjectiveTermination
-from pymoo.visualization.scatter import Scatter
 from util import vecPredictProba
 
 
@@ -28,7 +27,6 @@ class NSGA3Planner:
             n_max_gen=1000
         )
 
-        print(self.algorithm.pop_size)
         # create problem instance
         self.problem = Adaptation(reqClassifiers, targetConfidence, self.algorithm.pop_size, controllableFeatureIndices,
                                   controllableFeatureDomains, optimizationDirections)
@@ -42,8 +40,6 @@ class NSGA3Planner:
                        self.algorithm,
                        seed=1,
                        termination=self.termination)
-
-        # Scatter().add(res.F).show()
 
         if res.X is not None:
             adaptations = res.X

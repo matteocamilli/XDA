@@ -34,8 +34,7 @@ class CustomPlanner:
         knn.fit(X.values, np.zeros((X.shape[0],)))
         self.knn = knn
 
-        #TODO take execution times
-        #startTime = time.time()
+        startTime = time.time()
 
         # make pdps
         self.pdps = {}
@@ -59,9 +58,8 @@ class CustomPlanner:
                     os.makedirs(path)
             self.summaryPdps.append(pdp.multiplyPdps(self.pdps[i], path + "/" + feature + ".png"))
 
-        # TODO take execution times
-        #endTime = time.time()
-        #print("PDP building time: " + str(endTime - startTime))
+        endTime = time.time()
+        print("Offline preprocessing duration: " + str(endTime - startTime) + " s\n" + "=" * 100)
 
     def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures, tempExcludedFeatures):
         # select a feature to modify
