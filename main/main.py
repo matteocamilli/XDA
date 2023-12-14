@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
     n_reqs = len(reqs)
     n_neighbors = 10
-    n_startingSolutions = 10
+    n_startingSolutions = 2
     n_controllableFeatures = len(controllableFeaturesNames)
 
     targetConfidence = np.full((1, n_reqs), 0.8)[0]
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     for f in files:
         os.remove(f)
 
-    testNum = 200
+    testNum = 2
     for k in range(1, testNum + 1):
         random.seed()
         rowIndex = k - 1  # random.randrange(0, X_test.shape[0])

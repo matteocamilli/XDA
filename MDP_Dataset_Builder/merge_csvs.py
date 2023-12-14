@@ -1,5 +1,9 @@
 import os
+import warnings
 import pandas as pd
+
+# suppress all warnings
+warnings.filterwarnings("ignore")
 
 files = os.listdir("./")
 files.sort()

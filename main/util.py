@@ -29,9 +29,9 @@ def evaluateDataset(dataset, name):
     np.save("./starting_combinations.npy", dataset)
 
     if os.name == "posix":
-        os.system("./execute.sh ./starting_combinations.npy")
+        os.system("./evaluate_adaptations.sh ./starting_combinations.npy")
     else:
-        os.system("execute.bat ./starting_combinations.npy")
+        os.system("evaluate_adaptations.bat ./starting_combinations.npy")
 
     # Rename the file
     os.chdir("..")
