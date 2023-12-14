@@ -180,6 +180,7 @@ reqsNamesInGraphs = ["R1", "R2", "R3", "R4"]
 results = readFromCsv(pathToResults + 'results.csv')
 nReqs = len(results["nsga3_confidence"][0])
 reqs = reqs[:nReqs]
+reqsNamesInGraphs = reqsNamesInGraphs[:nReqs]
 targetConfidence = np.full((1, nReqs), 0.8)[0]
 
 if evaluate:
