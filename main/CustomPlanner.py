@@ -18,6 +18,8 @@ class CustomPlanner:
                  optimizationScoreFunction,
                  delta=1, plotsPath=None):
 
+        preprocessingStartTime = time.time()
+
         self.n_neighbors = n_neighbors
         self.n_startingSolutions = n_startingSolutions
         self.reqClassifiers = reqClassifiers
@@ -48,6 +50,10 @@ class CustomPlanner:
                         os.makedirs(path)
                 self.pdps[i].append(pdp.partialDependencePlot(reqClassifier, X, [feature], "both", path + "/" + feature + ".png"))
 
+        endTime = time.time()
+        print("PDPs generation duration:             " + str(endTime - startTime) + " s")
+        startTime = time.time()
+
         # make summary pdps
         self.summaryPdps = []
         for i, feature in enumerate(controllableFeaturesNames):
@@ -59,7 +65,8 @@ class CustomPlanner:
             self.summaryPdps.append(pdp.multiplyPdps(self.pdps[i], path + "/" + feature + ".png"))
 
         endTime = time.time()
-        print("Offline preprocessing duration: " + str(endTime - startTime) + " s\n" + "=" * 100)
+        print("SPDPs generation duration:            " + str(endTime - startTime) + " s")
+        print("Total offline preprocessing duration: " + str(endTime - preprocessingStartTime) + " s\n" + "=" * 100)
 
     def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures, tempExcludedFeatures):
         # select a feature to modify
