@@ -16,18 +16,19 @@ font = {'family' : 'sans',
 
 matplotlib.rc('font', **font)
 
+
 def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=None, show=False, seconds=False, legendInside=False):
     columns = data.columns
     nColumns = len(columns)
-    fig = plt.figure()#plt.figure(figsize=(10, 10 * nColumns/2))
-    ax1 = fig.add_subplot(111)#(nColumns, 1, 1)
+    fig = plt.figure()  # plt.figure(figsize=(10, 10 * nColumns/2))
+    ax1 = fig.add_subplot(111)  # (nColumns, 1, 1)
 
     # Creating axes instance
     bp = ax1.boxplot(data, patch_artist=True,
                      notch='True', vert=True)
 
     colors = plt.cm.Spectral(np.linspace(.1, .9, 2))
-    #colors = np.append(colors[0::2], colors[1::2], axis=0)
+    # colors = np.append(colors[0::2], colors[1::2], axis=0)
     c = np.copy(colors)
     for i in range(nColumns//2):
         c = np.append(c, colors, axis=0)
@@ -79,7 +80,7 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
             return str(int(x)) + ' s'
         ax1.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
 
-    #legend
+    # legend
     box = ax1.get_position()
     ax1.set_position([box.x0, box.y0 + box.height * 0.1,
                      box.width, box.height * 0.9])
@@ -115,6 +116,7 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
         fig.show()
     else:
         plt.clf()
+
 
 def personalizedBarChart(data, name, path=None, show=False, percentage=False):
     colors = plt.cm.Spectral(np.linspace(.1, .9, 2))
@@ -186,11 +188,11 @@ targetConfidence = np.full((1, nReqs), 0.8)[0]
 if evaluate:
     evaluateAdaptations(results, featureNames)
 
-#read outcomes from csv
+# read outcomes from csv
 customOutcomes = pd.read_csv(pathToResults + 'customDataset.csv')
 nsga3Outcomes = pd.read_csv(pathToResults + 'nsga3Dataset.csv')
 
-#build indices arrays
+# build indices arrays
 nsga3ConfidenceNames = ['nsga3_confidence_' + req for req in reqs]
 nsga3OutcomeNames = ['nsga3_outcome_' + req for req in reqs]
 customConfidenceNames = ['custom_confidence_' + req for req in reqs]
@@ -213,7 +215,7 @@ confidences = confidences[list(sum(zip(nsga3Confidences.columns, customConfidenc
 scores = results[["nsga3_score", "custom_score"]]
 times = results[["nsga3_time", "custom_time"]]
 
-#plots
+# plots
 plotPath = pathToResults + 'plots/'
 if not os.path.exists(plotPath):
     os.makedirs(plotPath)
@@ -222,7 +224,7 @@ personalizedBoxPlot(confidences, "Confidences comparison", reqsNamesInGraphs, pa
 personalizedBoxPlot(scores, "Score comparison", path=plotPath)
 personalizedBoxPlot(times, "Execution time comparison", path=plotPath, seconds=True, legendInside=True)
 
-#predicted successful adaptations
+# predicted successful adaptations
 nsga3PredictedSuccessful = (confidences[nsga3ConfidenceNames] > targetConfidence).all(axis=1)
 customPredictedSuccessful = (confidences[customConfidenceNames] > targetConfidence).all(axis=1)
 
@@ -238,14 +240,14 @@ print(str(customConfidences.mean()) + "\n")
 print("NSGA-III mean probas of predicted success: \n" + str(nsga3Confidences[nsga3PredictedSuccessful].mean()) + '\n')
 print("XDA mean probas of predicted success: \n" + str(customConfidences[customPredictedSuccessful].mean()) + '\n')
 
-#predicted successful adaptations
+# predicted successful adaptations
 nsga3Successful = outcomes[nsga3OutcomeNames].all(axis=1)
 customSuccessful = outcomes[customOutcomeNames].all(axis=1)
 
 nsga3SuccessRate = nsga3Successful.mean()
 customSuccessRate = customSuccessful.mean()
 
-#outcomes analysis
+# outcomes analysis
 print("NSGA-III success rate: " + "{:.2%}".format(nsga3SuccessRate))
 print(str(outcomes[nsga3OutcomeNames].mean()) + "\n")
 print("XDA success rate:  " + "{:.2%}".format(customSuccessRate))
@@ -261,5 +263,5 @@ personalizedBarChart(successRate, "Success Rate", plotPath)
 
 successRateOfPredictedSuccess = pd.DataFrame([[outcomes[nsga3OutcomeNames][nsga3PredictedSuccessful].all(axis=1).mean(),
                                                outcomes[customOutcomeNames][customPredictedSuccessful].all(axis=1).mean()]],
-                                               columns=["NSGA-III", "XDA"])
+                                             columns=["NSGA-III", "XDA"])
 personalizedBarChart(successRateOfPredictedSuccess, "Success Rate of Predicted Success", plotPath)
