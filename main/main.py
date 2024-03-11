@@ -7,6 +7,9 @@ import pandas as pd
 import numpy as np
 from colorama import Fore, Style
 from sklearn.model_selection import train_test_split
+from SHAPCustomPlanner import SHAPCustomPlanner
+from PCACustomPlanner import PCACustomPlanner
+from FICustomPlanner import FICustomPlanner
 from model.ModelConstructor import constructModel
 import explainability_techniques.LIME as lime
 from CustomPlanner import CustomPlanner
@@ -22,6 +25,7 @@ def successScore(adaptation, reqClassifiers, targetSuccessProba):
 # provided optimization score function (based on the ideal controllable feature assignment)
 def optimizationScore(adaptation):
     return 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
+
 
 # ====================================================================================================== #
 # IMPORTANT: everything named as custom in the code refers to the XDA approach                           #
@@ -91,6 +95,18 @@ if __name__ == '__main__':
                                   controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
                                   optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
+    SHAPcustomPlanner = SHAPCustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
+                                          controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
+                                          optimizationDirections, optimizationScore, 1, "../explainability_plots")
+
+    PCAcustomPlanner = PCACustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
+                                        controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
+                                        optimizationDirections, optimizationScore, 1, "../explainability_plots")
+
+    FICustomPlanner = FICustomPlanner(X_train, y_train, n_neighbors, n_startingSolutions, models, targetConfidence,
+                                      controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
+                                      optimizationDirections, optimizationScore, 1, "../explainability_plots")
+
     nsga3Planner = NSGA3Planner(models, targetConfidence, [0, 1, 2, 3], controllableFeatureDomains,
                                 optimizationDirections, successScore, optimizationScore)
 
@@ -99,10 +115,19 @@ if __name__ == '__main__':
 
     # metrics
     meanCustomScore = 0
+    meanCustomScoreSHAP = 0
+    meanCustomScorePCA = 0
+    meanCustomScoreFI = 0
     meanNSGA3Score = 0
     meanSpeedup = 0
     meanScoreDiff = 0
+    meanScoreDiffSHAP = 0
+    meanScoreDiffPCA = 0
+    meanScoreDiffFI = 0
     failedAdaptations = 0
+    failedAdaptationsSHAP = 0
+    failedAdaptationsPCA = 0
+    failedAdaptationsFI = 0
 
     # adaptations
     results = []
@@ -150,6 +175,66 @@ if __name__ == '__main__':
         print("Custom algorithm execution time: " + str(customTime) + " s")
         print("-" * 100)
 
+        startTime = time.time()
+        SHAPcustomAdaptation, SHAPcustomConfidence, SHAPcustomScore = SHAPcustomPlanner.findAdaptation(row)
+        endTime = time.time()
+        SHAPcustomTime = endTime - startTime
+
+        if SHAPcustomAdaptation is not None:
+            for i, req in enumerate(reqs):
+                lime.saveExplanation(lime.explain(limeExplainer, models[i], SHAPcustomAdaptation),
+                                     path + "/" + str(k) + "_" + req + "_final")
+
+            print("Best adaptation SHAP:                 " + str(SHAPcustomAdaptation[0:n_controllableFeatures]))
+            print("Model confidence SHAP:                " + str(SHAPcustomConfidence))
+            print("Adaptation score SHAP:                " + str(SHAPcustomScore) + " / 400")
+        else:
+            print("No adaptation found")
+            SHAPcustomScore = None
+
+        print("Custom SHAP algorithm execution time: " + str(SHAPcustomTime) + " s")
+        print("-" * 100)
+
+        startTime = time.time()
+        PCAcustomAdaptation, PCAcustomConfidence, PCAcustomScore = PCAcustomPlanner.findAdaptation(row)
+        endTime = time.time()
+        PCAcustomTime = endTime - startTime
+
+        if PCAcustomAdaptation is not None:
+            for i, req in enumerate(reqs):
+                lime.saveExplanation(lime.explain(limeExplainer, models[i], PCAcustomAdaptation),
+                                     path + "/" + str(k) + "_" + req + "_final")
+
+            print("Best adaptation PCA:                 " + str(PCAcustomAdaptation[0:n_controllableFeatures]))
+            print("Model confidence PCA:                " + str(PCAcustomConfidence))
+            print("Adaptation score PCA:                " + str(PCAcustomScore) + " / 400")
+        else:
+            print("No adaptation found")
+            PCAcustomScore = None
+
+        print("Custom PCA algorithm execution time: " + str(PCAcustomTime) + " s")
+        print("-" * 100)
+
+        startTime = time.time()
+        FIcustomAdaptation, FIcustomConfidence, FIcustomScore = FICustomPlanner.findAdaptation(row)
+        endTime = time.time()
+        FIcustomTime = endTime - startTime
+
+        if FIcustomAdaptation is not None:
+            for i, req in enumerate(reqs):
+                lime.saveExplanation(lime.explain(limeExplainer, models[i], FIcustomAdaptation),
+                                     path + "/" + str(k) + "_" + req + "_final")
+
+            print("Best adaptation FI:                 " + str(FIcustomAdaptation[0:n_controllableFeatures]))
+            print("Model confidence FI:                " + str(FIcustomConfidence))
+            print("Adaptation score FI:                " + str(FIcustomScore) + " / 400")
+        else:
+            print("No adaptation found")
+            FIcustomScore = None
+
+        print("Custom FI algorithm execution time: " + str(FIcustomTime) + " s")
+        print("-" * 100)
+
         # genetic algorithm
         externalFeatures = row[n_controllableFeatures:]
 
@@ -171,6 +256,19 @@ if __name__ == '__main__':
         speedup = nsga3Time / customTime
         meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
         print(Fore.GREEN + "Speed-up: " + " " * 14 + str(speedup) + "x")
+        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up Custom: " + " " * 9 + str(meanSpeedup) + "x")
+        speedup = nsga3Time / SHAPcustomTime
+        meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
+        print(Fore.GREEN + "Speed-up SHAP: " + " " * 14 + str(speedup) + "x")
+        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up SHAP: " + " " * 9 + str(meanSpeedup) + "x")
+        speedup = nsga3Time / PCAcustomTime
+        meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
+        print(Fore.GREEN + "Speed-up PCA: " + " " * 14 + str(speedup) + "x")
+        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up PCA: " + " " * 9 + str(meanSpeedup) + "x")
+        speedup = nsga3Time / FIcustomTime
+        meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
+        print(Fore.GREEN + "Speed-up FI: " + " " * 14 + str(speedup) + "x")
+        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up FI: " + " " * 9 + str(meanSpeedup) + "x")
 
         if customAdaptation is not None and nsga3Adaptation is not None:
             scoreDiff = customScore - nsga3Score
@@ -180,7 +278,29 @@ if __name__ == '__main__':
         else:
             failedAdaptations += 1
 
-        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up: " + " " * 9 + str(meanSpeedup) + "x")
+        if SHAPcustomAdaptation is not None and nsga3Adaptation is not None:
+            scoreDiff = SHAPcustomScore - nsga3Score
+            scoreImprovement = scoreDiff / nsga3Score
+            print("Score diff SHAP:        " + " " * 5 + str(scoreDiff))
+            print("Score improvement SHAP: " + " " * 5 + "{:.2%}".format(scoreImprovement))
+        else:
+            failedAdaptationsSHAP += 1
+
+        if PCAcustomAdaptation is not None and nsga3Adaptation is not None:
+            scoreDiff = PCAcustomScore - nsga3Score
+            scoreImprovement = scoreDiff / nsga3Score
+            print("Score diff PCA:        " + " " * 5 + str(scoreDiff))
+            print("Score improvement PCA: " + " " * 5 + "{:.2%}".format(scoreImprovement))
+        else:
+            failedAdaptationsPCA += 1
+
+        if FIcustomAdaptation is not None and nsga3Adaptation is not None:
+            scoreDiff = FIcustomScore - nsga3Score
+            scoreImprovement = scoreDiff / nsga3Score
+            print("Score diff FI:        " + " " * 5 + str(scoreDiff))
+            print("Score improvement FI: " + " " * 5 + "{:.2%}".format(scoreImprovement))
+        else:
+            failedAdaptationsFI += 1
 
         if customAdaptation is not None and nsga3Adaptation is not None:
             meanCustomScore = (meanCustomScore * (k - 1 - failedAdaptations) + customScore) / (k - failedAdaptations)
@@ -189,6 +309,30 @@ if __name__ == '__main__':
             meanScoreImprovement = meanScoreDiff / meanNSGA3Score
             print("Mean score diff:        " + str(meanScoreDiff))
             print("Mean score improvement: " + "{:.2%}".format(meanScoreImprovement))
+
+        if SHAPcustomAdaptation is not None and nsga3Adaptation is not None:
+            meanCustomScoreSHAP = (meanCustomScoreSHAP * (k - 1 - failedAdaptationsSHAP) + SHAPcustomScore) / (k - failedAdaptationsSHAP)
+            meanNSGA3Score = (meanNSGA3Score * (k - 1 - failedAdaptationsSHAP) + nsga3Score) / (k - failedAdaptationsSHAP)
+            meanScoreDiffSHAP = (meanScoreDiffSHAP * (k - 1 - failedAdaptationsSHAP) + scoreDiff) / (k - failedAdaptationsSHAP)
+            meanScoreImprovementSHAP = meanScoreDiffSHAP / meanNSGA3Score
+            print("Mean score diff SHAP:        " + str(meanScoreDiffSHAP))
+            print("Mean score improvement SHAP: " + "{:.2%}".format(meanScoreImprovementSHAP))
+
+        if PCAcustomAdaptation is not None and nsga3Adaptation is not None:
+            meanCustomScorePCA = (meanCustomScorePCA * (k - 1 - failedAdaptationsPCA) + PCAcustomScore) / (k - failedAdaptationsPCA)
+            meanNSGA3Score = (meanNSGA3Score * (k - 1 - failedAdaptationsPCA) + nsga3Score) / (k - failedAdaptationsPCA)
+            meanScoreDiffPCA = (meanScoreDiffPCA * (k - 1 - failedAdaptationsPCA) + scoreDiff) / (k - failedAdaptationsPCA)
+            meanScoreImprovementPCA = meanScoreDiffPCA / meanNSGA3Score
+            print("Mean score diff:        " + str(meanScoreDiffPCA))
+            print("Mean score improvement: " + "{:.2%}".format(meanScoreImprovementPCA))
+
+        if FIcustomAdaptation is not None and nsga3Adaptation is not None:
+            meanCustomScoreFI = (meanCustomScoreFI * (k - 1 - failedAdaptationsFI) + FIcustomScore) / (k - failedAdaptationsFI)
+            meanNSGA3Score = (meanNSGA3Score * (k - 1 - failedAdaptationsFI) + nsga3Score) / (k - failedAdaptationsFI)
+            meanScoreDiffFI = (meanScoreDiffFI * (k - 1 - failedAdaptationsFI) + scoreDiff) / (k - failedAdaptationsFI)
+            meanScoreImprovementFI = meanScoreDiffPCA / meanNSGA3Score
+            print("Mean score diff:        " + str(meanScoreDiffPCA))
+            print("Mean score improvement: " + "{:.2%}".format(meanScoreImprovementFI))
 
         print(Style.RESET_ALL + "=" * 100)
 

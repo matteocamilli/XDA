@@ -8,6 +8,7 @@ from util import vecPredictProba
 from util import cartesian_product
 
 
+
 class CustomPlanner:
     def __init__(self, X, n_neighbors, n_startingSolutions,
                  reqClassifiers, targetConfidence,
@@ -48,7 +49,8 @@ class CustomPlanner:
                     path = plotsPath + "/req_" + str(j)
                     if not os.path.exists(path):
                         os.makedirs(path)
-                self.pdps[i].append(pdp.partialDependencePlot(reqClassifier, X, [feature], "both", path + "/" + feature + ".png"))
+                self.pdps[i].append(
+                    pdp.partialDependencePlot(reqClassifier, X, [feature], "both", path + "/" + feature + ".png"))
 
         endTime = time.time()
         print("PDPs generation duration:             " + str(endTime - startTime) + " s")
@@ -68,7 +70,10 @@ class CustomPlanner:
         print("SPDPs generation duration:            " + str(endTime - startTime) + " s")
         print("Total offline preprocessing duration: " + str(endTime - preprocessingStartTime) + " s\n" + "=" * 100)
 
-    def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures, tempExcludedFeatures):
+
+
+    def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures,
+                          tempExcludedFeatures):
         # select a feature to modify
         featureIndex = None
         controllableIndex = None
@@ -132,7 +137,8 @@ class CustomPlanner:
                     neighborIndex = np.ravel(self.knn.kneighbors([adaptation], 1, False))[0]
                 recalculateNeighbor = True
 
-                maxYVals = [(j, pdp.getMaxOfLine(self.summaryPdps[j], neighborIndex)) for j in range(n_controllableFeatures)]
+                maxYVals = [(j, pdp.getMaxOfLine(self.summaryPdps[j], neighborIndex)) for j in
+                            range(n_controllableFeatures)]
                 maxYVals = sorted(maxYVals, key=lambda val: val[1], reverse=True)
 
                 for val in maxYVals:
@@ -210,13 +216,15 @@ class CustomPlanner:
             def solutionRank(a, c):
                 return (self.optimizationScoreFunction(a) +
                         np.sum(c - self.targetConfidence) / np.sum(solutionRank.ones - self.targetConfidence) * 100)
+
             # function constant to avoid useless computation at each call
             solutionRank.ones = np.ravel(np.ones((1, len(self.reqClassifiers))))
 
             validAdaptationsRanks = [solutionRank(validAdaptations[i], validAdaptationsConfidence[i])
                                      for i in range(len(validAdaptations))]
 
-            bestAdaptationIndices = np.argpartition(validAdaptationsRanks, -self.n_startingSolutions)[-self.n_startingSolutions:]
+            bestAdaptationIndices = np.argpartition(validAdaptationsRanks, -self.n_startingSolutions)[
+                                    -self.n_startingSolutions:]
             bestAdaptations = validAdaptations[bestAdaptationIndices]
             bestAdaptationsConfidence = validAdaptationsConfidence[bestAdaptationIndices]
 
@@ -246,7 +254,8 @@ class CustomPlanner:
             # select the best n based on the score
             if len(bestAdaptations) > self.n_startingSolutions:
                 bestAdaptationsScores = [self.optimizationScoreFunction(a) for a in bestAdaptations]
-                bestAdaptationIndices = np.argpartition(bestAdaptationsScores, -self.n_startingSolutions)[-self.n_startingSolutions:]
+                bestAdaptationIndices = np.argpartition(bestAdaptationsScores, -self.n_startingSolutions)[
+                                        -self.n_startingSolutions:]
                 bestAdaptations = bestAdaptations[bestAdaptationIndices]
                 bestAdaptationsConfidence = bestAdaptationsConfidence[bestAdaptationIndices]
 
