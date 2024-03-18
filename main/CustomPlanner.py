@@ -8,7 +8,6 @@ from util import vecPredictProba
 from util import cartesian_product
 
 
-
 class CustomPlanner:
     def __init__(self, X, n_neighbors, n_startingSolutions,
                  reqClassifiers, targetConfidence,
@@ -69,8 +68,6 @@ class CustomPlanner:
         endTime = time.time()
         print("SPDPs generation duration:            " + str(endTime - startTime) + " s")
         print("Total offline preprocessing duration: " + str(endTime - preprocessingStartTime) + " s\n" + "=" * 100)
-
-
 
     def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures,
                           tempExcludedFeatures):

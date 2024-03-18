@@ -45,13 +45,16 @@ def evaluateDataset(dataset, name):
     os.rename(source_file, new_file)
 
 
-def evaluateAdaptations(dataset, featureNames):
-
-    customAdaptations = pd.DataFrame(dataset['custom_adaptation'].to_list(), columns=featureNames)
-    nsga3Adaptations = pd.DataFrame(dataset['nsga3_adaptation'].to_list(), columns=featureNames)
+def evaluateAdaptations(dataset_custom, dataset_SHAP, dataset_PCA, dataset_FI, featureNames):
+    customAdaptations = pd.DataFrame(dataset_custom['custom_adaptation'].to_list(), columns=featureNames)
+    SHAPAdaptations = pd.DataFrame(dataset_SHAP['custom_adaptation'].to_list(), columns=featureNames)
+    PCAAdaptations = pd.DataFrame(dataset_PCA['custom_adaptation'].to_list(), columns=featureNames)
+    FIAdaptations = pd.DataFrame(dataset_FI['custom_adaptation'].to_list(), columns=featureNames)
 
     evaluateDataset(customAdaptations, "customDataset")
-    evaluateDataset(nsga3Adaptations, "nsga3Dataset")
+    evaluateDataset(SHAPAdaptations, "SHAPDataset")
+    evaluateDataset(PCAAdaptations, "PCADataset")
+    evaluateDataset(FIAdaptations, "FIDataset")
 
 
 def readFromCsv(path):

@@ -15,7 +15,7 @@ def shapClassifier(model, X_train, controllableFeatures):
 
     sorted_feature_indices = [feature[0] for feature in features_importance]
 
-    print(sorted_feature_indices)
+    # print(sorted_feature_indices)
 
     # shap.summary_plot(shap_values, plot_type='bar')
 

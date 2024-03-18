@@ -22,6 +22,7 @@ class SHAPCustomPlanner(CustomPlanner):
             self.sortedFeatures[i] = shapClassifier(reqClassifier, X, controllableFeatureIndices)
         endTime = time.time()
         print("SHAP classifier duration:             " + str(endTime - startTime) + " s")
+        print("=" * 100)
 
     def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures,
                           tempExcludedFeatures):

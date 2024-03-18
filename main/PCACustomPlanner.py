@@ -23,6 +23,7 @@ class PCACustomPlanner(CustomPlanner):
             self.sortedFeatures[i] = pcaClassifier(X, controllableFeatureIndices)
         endTime = time.time()
         print("PCA classifier duration:             " + str(endTime - startTime) + " s")
+        print("=" * 100)
 
     def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures,
                           tempExcludedFeatures):

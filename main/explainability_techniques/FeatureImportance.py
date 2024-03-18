@@ -17,6 +17,6 @@ def permutation_importance_classifier(model, X_train, y_train, controllable_feat
 
     sorted_feature_indices = [feature[0] for feature in features_importance]
 
-    print(sorted_feature_indices)
+    # print(sorted_feature_indices)
 
     return sorted_feature_indices

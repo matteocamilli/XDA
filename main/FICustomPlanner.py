@@ -23,6 +23,7 @@ class FICustomPlanner(CustomPlanner):
             self.sortedFeatures[i] = permutation_importance_classifier(reqClassifier, X, Y, controllableFeatureIndices)
         endTime = time.time()
         print("Feature Importance classifier duration:             " + str(endTime - startTime) + " s")
+        print("=" * 100)
 
     def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures,
                           tempExcludedFeatures):

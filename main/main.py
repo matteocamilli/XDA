@@ -120,6 +120,9 @@ if __name__ == '__main__':
     meanCustomScoreFI = 0
     meanNSGA3Score = 0
     meanSpeedup = 0
+    meanSpeedupSHAP = 0
+    meanSpeedupPCA = 0
+    meanSpeedupFI = 0
     meanScoreDiff = 0
     meanScoreDiffSHAP = 0
     meanScoreDiffPCA = 0
@@ -131,6 +134,9 @@ if __name__ == '__main__':
 
     # adaptations
     results = []
+    resultsSHAP = []
+    resultsPCA = []
+    resultsFI = []
     customDataset = []
     nsga3Dataset = []
 
@@ -251,24 +257,30 @@ if __name__ == '__main__':
         print("-" * 100)
 
         scoreDiff = None
+        SHAPscoreDiff = None
+        PCAscoreDiff = None
+        FIscoreDiff = None
         scoreImprovement = None
+        SHAPscoreImprovement = None
+        PCAscoreImprovement = None
+        FIscoreImprovement = None
 
         speedup = nsga3Time / customTime
         meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
         print(Fore.GREEN + "Speed-up: " + " " * 14 + str(speedup) + "x")
         print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up Custom: " + " " * 9 + str(meanSpeedup) + "x")
-        speedup = nsga3Time / SHAPcustomTime
-        meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
-        print(Fore.GREEN + "Speed-up SHAP: " + " " * 14 + str(speedup) + "x")
-        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up SHAP: " + " " * 9 + str(meanSpeedup) + "x")
-        speedup = nsga3Time / PCAcustomTime
-        meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
-        print(Fore.GREEN + "Speed-up PCA: " + " " * 14 + str(speedup) + "x")
-        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up PCA: " + " " * 9 + str(meanSpeedup) + "x")
-        speedup = nsga3Time / FIcustomTime
-        meanSpeedup = (meanSpeedup * (k - 1) + speedup) / k
-        print(Fore.GREEN + "Speed-up FI: " + " " * 14 + str(speedup) + "x")
-        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up FI: " + " " * 9 + str(meanSpeedup) + "x")
+        SHAPspeedup = nsga3Time / SHAPcustomTime
+        meanSpeedupSHAP = (meanSpeedupSHAP * (k - 1) + SHAPspeedup) / k
+        print(Fore.GREEN + "Speed-up SHAP: " + " " * 14 + str(SHAPspeedup) + "x")
+        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up SHAP: " + " " * 9 + str(meanSpeedupSHAP) + "x")
+        PCAspeedup = nsga3Time / PCAcustomTime
+        meanSpeedupPCA = (meanSpeedupPCA * (k - 1) + PCAspeedup) / k
+        print(Fore.GREEN + "Speed-up PCA: " + " " * 14 + str(PCAspeedup) + "x")
+        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up PCA: " + " " * 9 + str(meanSpeedupPCA) + "x")
+        FIspeedup = nsga3Time / FIcustomTime
+        meanSpeedupFI = (meanSpeedupFI * (k - 1) + FIspeedup) / k
+        print(Fore.GREEN + "Speed-up FI: " + " " * 14 + str(FIspeedup) + "x")
+        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up FI: " + " " * 9 + str(meanSpeedupFI) + "x")
 
         if customAdaptation is not None and nsga3Adaptation is not None:
             scoreDiff = customScore - nsga3Score
@@ -279,26 +291,26 @@ if __name__ == '__main__':
             failedAdaptations += 1
 
         if SHAPcustomAdaptation is not None and nsga3Adaptation is not None:
-            scoreDiff = SHAPcustomScore - nsga3Score
-            scoreImprovement = scoreDiff / nsga3Score
-            print("Score diff SHAP:        " + " " * 5 + str(scoreDiff))
-            print("Score improvement SHAP: " + " " * 5 + "{:.2%}".format(scoreImprovement))
+            SHAPscoreDiff = SHAPcustomScore - nsga3Score
+            SHAPscoreImprovement = SHAPscoreDiff / nsga3Score
+            print("Score diff SHAP:        " + " " * 5 + str(SHAPscoreDiff))
+            print("Score improvement SHAP: " + " " * 5 + "{:.2%}".format(SHAPscoreImprovement))
         else:
             failedAdaptationsSHAP += 1
 
         if PCAcustomAdaptation is not None and nsga3Adaptation is not None:
-            scoreDiff = PCAcustomScore - nsga3Score
-            scoreImprovement = scoreDiff / nsga3Score
-            print("Score diff PCA:        " + " " * 5 + str(scoreDiff))
-            print("Score improvement PCA: " + " " * 5 + "{:.2%}".format(scoreImprovement))
+            PCAscoreDiff = PCAcustomScore - nsga3Score
+            PCAscoreImprovement = PCAscoreDiff / nsga3Score
+            print("Score diff PCA:        " + " " * 5 + str(PCAscoreDiff))
+            print("Score improvement PCA: " + " " * 5 + "{:.2%}".format(PCAscoreImprovement))
         else:
             failedAdaptationsPCA += 1
 
         if FIcustomAdaptation is not None and nsga3Adaptation is not None:
-            scoreDiff = FIcustomScore - nsga3Score
-            scoreImprovement = scoreDiff / nsga3Score
-            print("Score diff FI:        " + " " * 5 + str(scoreDiff))
-            print("Score improvement FI: " + " " * 5 + "{:.2%}".format(scoreImprovement))
+            FIscoreDiff = FIcustomScore - nsga3Score
+            FIscoreImprovement = FIscoreDiff / nsga3Score
+            print("Score diff FI:        " + " " * 5 + str(FIscoreDiff))
+            print("Score improvement FI: " + " " * 5 + "{:.2%}".format(FIscoreImprovement))
         else:
             failedAdaptationsFI += 1
 
@@ -311,27 +323,33 @@ if __name__ == '__main__':
             print("Mean score improvement: " + "{:.2%}".format(meanScoreImprovement))
 
         if SHAPcustomAdaptation is not None and nsga3Adaptation is not None:
-            meanCustomScoreSHAP = (meanCustomScoreSHAP * (k - 1 - failedAdaptationsSHAP) + SHAPcustomScore) / (k - failedAdaptationsSHAP)
-            meanNSGA3Score = (meanNSGA3Score * (k - 1 - failedAdaptationsSHAP) + nsga3Score) / (k - failedAdaptationsSHAP)
-            meanScoreDiffSHAP = (meanScoreDiffSHAP * (k - 1 - failedAdaptationsSHAP) + scoreDiff) / (k - failedAdaptationsSHAP)
+            meanCustomScoreSHAP = (meanCustomScoreSHAP * (k - 1 - failedAdaptationsSHAP) + SHAPcustomScore) / (
+                        k - failedAdaptationsSHAP)
+            meanNSGA3Score = (meanNSGA3Score * (k - 1 - failedAdaptationsSHAP) + nsga3Score) / (
+                        k - failedAdaptationsSHAP)
+            meanScoreDiffSHAP = (meanScoreDiffSHAP * (k - 1 - failedAdaptationsSHAP) + scoreDiff) / (
+                        k - failedAdaptationsSHAP)
             meanScoreImprovementSHAP = meanScoreDiffSHAP / meanNSGA3Score
             print("Mean score diff SHAP:        " + str(meanScoreDiffSHAP))
             print("Mean score improvement SHAP: " + "{:.2%}".format(meanScoreImprovementSHAP))
 
         if PCAcustomAdaptation is not None and nsga3Adaptation is not None:
-            meanCustomScorePCA = (meanCustomScorePCA * (k - 1 - failedAdaptationsPCA) + PCAcustomScore) / (k - failedAdaptationsPCA)
+            meanCustomScorePCA = (meanCustomScorePCA * (k - 1 - failedAdaptationsPCA) + PCAcustomScore) / (
+                        k - failedAdaptationsPCA)
             meanNSGA3Score = (meanNSGA3Score * (k - 1 - failedAdaptationsPCA) + nsga3Score) / (k - failedAdaptationsPCA)
-            meanScoreDiffPCA = (meanScoreDiffPCA * (k - 1 - failedAdaptationsPCA) + scoreDiff) / (k - failedAdaptationsPCA)
+            meanScoreDiffPCA = (meanScoreDiffPCA * (k - 1 - failedAdaptationsPCA) + scoreDiff) / (
+                        k - failedAdaptationsPCA)
             meanScoreImprovementPCA = meanScoreDiffPCA / meanNSGA3Score
             print("Mean score diff:        " + str(meanScoreDiffPCA))
             print("Mean score improvement: " + "{:.2%}".format(meanScoreImprovementPCA))
 
         if FIcustomAdaptation is not None and nsga3Adaptation is not None:
-            meanCustomScoreFI = (meanCustomScoreFI * (k - 1 - failedAdaptationsFI) + FIcustomScore) / (k - failedAdaptationsFI)
+            meanCustomScoreFI = (meanCustomScoreFI * (k - 1 - failedAdaptationsFI) + FIcustomScore) / (
+                        k - failedAdaptationsFI)
             meanNSGA3Score = (meanNSGA3Score * (k - 1 - failedAdaptationsFI) + nsga3Score) / (k - failedAdaptationsFI)
             meanScoreDiffFI = (meanScoreDiffFI * (k - 1 - failedAdaptationsFI) + scoreDiff) / (k - failedAdaptationsFI)
             meanScoreImprovementFI = meanScoreDiffPCA / meanNSGA3Score
-            print("Mean score diff:        " + str(meanScoreDiffPCA))
+            print("Mean score diff:        " + str(meanScoreDiffFI))
             print("Mean score improvement: " + "{:.2%}".format(meanScoreImprovementFI))
 
         print(Style.RESET_ALL + "=" * 100)
@@ -341,17 +359,54 @@ if __name__ == '__main__':
                         nsga3Score, customScore, scoreDiff, scoreImprovement,
                         nsga3Time, customTime, speedup])
 
+        resultsSHAP.append([nsga3Adaptation, SHAPcustomAdaptation,
+                            nsga3Confidence, SHAPcustomConfidence,
+                            nsga3Score, SHAPcustomScore, SHAPscoreDiff, SHAPscoreImprovement,
+                            nsga3Time, SHAPcustomTime, SHAPspeedup])
+
+        resultsPCA.append([nsga3Adaptation, PCAcustomAdaptation,
+                           nsga3Confidence, PCAcustomConfidence,
+                           nsga3Score, PCAcustomScore, PCAscoreDiff, PCAscoreImprovement,
+                           nsga3Time, PCAcustomTime, PCAspeedup])
+
+        resultsFI.append([nsga3Adaptation, FIcustomAdaptation,
+                          nsga3Confidence, FIcustomConfidence,
+                          nsga3Score, FIcustomScore, FIscoreDiff, FIscoreImprovement,
+                          nsga3Time, FIcustomTime, FIspeedup])
+
     results = pd.DataFrame(results, columns=["nsga3_adaptation", "custom_adaptation",
                                              "nsga3_confidence", "custom_confidence",
                                              "nsga3_score", "custom_score", "score_diff", "score_improvement[%]",
                                              "nsga3_time", "custom_time", "speed-up"])
+
+    resultsSHAP = pd.DataFrame(resultsSHAP, columns=["nsga3_adaptation", "custom_adaptation",
+                                                     "nsga3_confidence", "custom_confidence",
+                                                     "nsga3_score", "custom_score", "score_diff",
+                                                     "score_improvement[%]",
+                                                     "nsga3_time", "custom_time", "speed-up"])
+
+    resultsPCA = pd.DataFrame(resultsPCA, columns=["nsga3_adaptation", "custom_adaptation",
+                                                   "nsga3_confidence", "custom_confidence",
+                                                   "nsga3_score", "custom_score", "score_diff",
+                                                   "score_improvement[%]",
+                                                   "nsga3_time", "custom_time", "speed-up"])
+
+    resultsFI = pd.DataFrame(resultsFI, columns=["nsga3_adaptation", "custom_adaptation",
+                                                  "nsga3_confidence", "custom_confidence",
+                                                  "nsga3_score", "custom_score", "score_diff",
+                                                  "score_improvement[%]",
+                                                  "nsga3_time", "custom_time", "speed-up"])
+
     path = "../results"
     if not os.path.exists(path):
         os.makedirs(path)
     results.to_csv(path + "/results.csv")
+    resultsSHAP.to_csv(path + "/resultsSHAP.csv")
+    resultsPCA.to_csv(path + "/resultsPCA.csv")
+    resultsFI.to_csv(path + "/resultsFI.csv")
 
     if evaluate:
-        evaluateAdaptations(results, featureNames)
+        evaluateAdaptations(results, resultsSHAP, resultsPCA, resultsFI, featureNames)
 
     programEndTime = time.time()
     totalExecutionTime = programEndTime - programStartTime

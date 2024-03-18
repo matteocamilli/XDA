@@ -1,8 +1,8 @@
 from sklearn.decomposition import PCA
 import numpy as np
 
-def pcaClassifier(X_train, controllableFeatures):
 
+def pcaClassifier(X_train, controllableFeatures):
     pca = PCA()
     pca.fit(X_train)
 
@@ -16,6 +16,6 @@ def pcaClassifier(X_train, controllableFeatures):
 
     sorted_feature_indices = [feature[0] for feature in features_importance]
 
-    print(sorted_feature_indices)
+    # print(sorted_feature_indices)
 
     return sorted_feature_indices
