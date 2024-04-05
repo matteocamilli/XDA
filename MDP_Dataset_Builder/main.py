@@ -1,4 +1,4 @@
-from utils import build_sequences
+from utils.input_sequence_builder import build_sequences
 from utils.file_proxy import build_output_csv, dump_sets_to_csv
 from utils.constraints import *
 import utils.executor as executor
@@ -18,7 +18,7 @@ def compute_results(ss_variables, index_to_run, total_to_train, constraints, pat
 
 
 if __name__ == "__main__":
-    mdp_simulator.config.FOLDER_NAME = "./RescueRobot"
+    mdp_simulator.config.FOLDER_NAME = "./UAV_v02"
     mdp_simulator.config.DEBUG_LEVEL = enums.LogTypes.ERROR
 
     if config.MAX_SAMPLES is not None:

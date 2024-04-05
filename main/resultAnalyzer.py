@@ -165,18 +165,15 @@ evaluate = False
 
 pathToResults = "../results/"
 
-featureNames = ["cruise speed",
-                "image resolution",
-                "illuminance",
-                "controls responsiveness",
-                "power",
-                "smoke intensity",
-                "obstacle size",
-                "obstacle distance",
-                "firm obstacle"]
+featureNames = ["formation",
+                "flying_speed",
+                "countermeasure",
+                "weather,day_time",
+                "threat_range",
+                "#threats"]
 
-reqs = ["req_0", "req_1", "req_2", "req_3"]
-reqsNamesInGraphs = ["R1", "R2", "R3", "R4"]
+reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5", "req_6", "req_7", "req_8", "req_9", "req_10", "req_11"]
+reqsNamesInGraphs = ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12"]
 
 # read dataframe from csv
 results = readFromCsv(pathToResults + 'results.csv')

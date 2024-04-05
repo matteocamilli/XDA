@@ -1,4 +1,4 @@
-from utils.constraints_builder import compute_constraints
+from MDP_Dataset_Builder.utils.constraints_builder import compute_constraints
 
 SS_VARIABLES = {
     "car_speed": {"domain": float, "range": [5.0, 50.0]},

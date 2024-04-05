@@ -18,10 +18,18 @@ class SHAPCustomPlanner(CustomPlanner):
 
         self.sortedFeatures = {}
         startTime = time.time()
+
+        cumulative_importance = np.zeros(len(controllableFeatureIndices))
+
         for i, reqClassifier in enumerate(self.reqClassifiers):
-            self.sortedFeatures[i] = shapClassifier(reqClassifier, X, controllableFeatureIndices)
+            feature_indices = shapClassifier(reqClassifier, X, controllableFeatureIndices)
+            for j in range(len(feature_indices)):
+                cumulative_importance[j] += feature_indices[j]
+
+        self.sortedFeatures = np.argsort(cumulative_importance)[::-1]
+
         endTime = time.time()
-        print("SHAP classifier duration:             " + str(endTime - startTime) + " s")
+        print("SHAP classifier duration: " + str(endTime - startTime) + " s")
         print("=" * 100)
 
     def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures,

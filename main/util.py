@@ -50,11 +50,13 @@ def evaluateAdaptations(dataset_custom, dataset_SHAP, dataset_PCA, dataset_FI, f
     SHAPAdaptations = pd.DataFrame(dataset_SHAP['custom_adaptation'].to_list(), columns=featureNames)
     PCAAdaptations = pd.DataFrame(dataset_PCA['custom_adaptation'].to_list(), columns=featureNames)
     FIAdaptations = pd.DataFrame(dataset_FI['custom_adaptation'].to_list(), columns=featureNames)
+    nsga3Adaptations = pd.DataFrame(dataset_custom['nsga3_adaptation'].to_list(), columns=featureNames)
 
     evaluateDataset(customAdaptations, "customDataset")
     evaluateDataset(SHAPAdaptations, "SHAPDataset")
     evaluateDataset(PCAAdaptations, "PCADataset")
     evaluateDataset(FIAdaptations, "FIDataset")
+    evaluateDataset(nsga3Adaptations, "nsga3Dataset")
 
 
 def readFromCsv(path):

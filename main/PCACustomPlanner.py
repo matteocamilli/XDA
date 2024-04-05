@@ -17,10 +17,10 @@ class PCACustomPlanner(CustomPlanner):
                          controllableFeaturesNames, controllableFeatureIndices, controllableFeatureDomains,
                          optimizationDirections, optimizationScoreFunction, delta, plotsPath)
 
-        self.sortedFeatures = {}
+        self.sortedFeatures = None
         startTime = time.time()
-        for i, reqClassifier in enumerate(self.reqClassifiers):
-            self.sortedFeatures[i] = pcaClassifier(X, controllableFeatureIndices)
+        scores = pcaClassifier(X, len(controllableFeatureIndices))
+        self.sortedFeatures = np.argsort(scores)[::-1]
         endTime = time.time()
         print("PCA classifier duration:             " + str(endTime - startTime) + " s")
         print("=" * 100)

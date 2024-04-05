@@ -13,10 +13,6 @@ def permutation_importance_classifier(model, X_train, y_train, controllable_feat
 
     features_importance = list(zip(controllable_features, importances))
 
-    features_importance.sort(key=lambda x: x[1][0], reverse=True)
+    scores = np.array([np.sum(tup[1]) for tup in features_importance])
 
-    sorted_feature_indices = [feature[0] for feature in features_importance]
-
-    # print(sorted_feature_indices)
-
-    return sorted_feature_indices
+    return scores

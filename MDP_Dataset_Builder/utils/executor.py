@@ -1,7 +1,7 @@
 import mdp_simulator
-from utils import build_sequences
-from utils.file_proxy import dump_ss_variables, build_output_csv
-from utils.constraints import *
+from MDP_Dataset_Builder.utils.input_sequence_builder import build_sequences
+from MDP_Dataset_Builder.utils.file_proxy import dump_ss_variables, build_output_csv
+from MDP_Dataset_Builder.utils.constraints import *
 import numpy as np
 
 PATH_TO_DATASET = "./starting_combinations.npy"

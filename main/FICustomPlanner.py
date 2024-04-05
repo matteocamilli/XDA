@@ -19,13 +19,24 @@ class FICustomPlanner(CustomPlanner):
 
         self.sortedFeatures = {}
         startTime = time.time()
+
+        cumulative_importance = np.zeros(len(controllableFeatureIndices))
+
         for i, reqClassifier in enumerate(self.reqClassifiers):
-            self.sortedFeatures[i] = permutation_importance_classifier(reqClassifier, X, Y, controllableFeatureIndices)
+
+            feature_indices = permutation_importance_classifier(reqClassifier, X, Y, controllableFeatureIndices)
+
+            for j in range(len(feature_indices)):
+                cumulative_importance[j] += feature_indices[j]
+
+        self.sortedFeatures = np.argsort(cumulative_importance)[::-1]
+
         endTime = time.time()
-        print("Feature Importance classifier duration:             " + str(endTime - startTime) + " s")
+        print("FI classifier duration: " + str(endTime - startTime) + " s")
         print("=" * 100)
 
-    def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures,
+
+def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures,
                           tempExcludedFeatures):
 
         # select a feature to modify

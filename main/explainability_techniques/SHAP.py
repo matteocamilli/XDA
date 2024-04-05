@@ -1,9 +1,37 @@
 import shap
 import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neural_network import MLPClassifier
+from xgboost import XGBClassifier
 
 
 def shapClassifier(model, X_train, controllableFeatures):
-    explainer = shap.Explainer(model)
+    if isinstance(model, LogisticRegression):
+        explainer = shap.KernelExplainer(model.predict, X_train)
+
+    elif isinstance(model, RandomForestClassifier):
+
+        explainer = shap.TreeExplainer(model)
+
+    elif isinstance(model, DecisionTreeClassifier):
+
+        explainer = shap.TreeExplainer(model)
+
+    elif isinstance(model, MLPClassifier):
+
+        explainer = shap.KernelExplainer(model.predict, X_train)
+
+    elif isinstance(model, GradientBoostingClassifier):
+
+        explainer = shap.Explainer(model)
+
+    elif isinstance(model, XGBClassifier):
+        explainer = shap.TreeExplainer(model)
+
+    else:
+        print("Il tipo del modello non è riconosciuto.")
 
     shap_values = explainer.shap_values(X_train)
 
@@ -11,12 +39,6 @@ def shapClassifier(model, X_train, controllableFeatures):
 
     features_importance = list(zip(controllableFeatures, mean_shap_values))
 
-    features_importance.sort(key=lambda x: x[1], reverse=True)
+    scores = np.array([np.sum(tup[1]) for tup in features_importance])
 
-    sorted_feature_indices = [feature[0] for feature in features_importance]
-
-    # print(sorted_feature_indices)
-
-    # shap.summary_plot(shap_values, plot_type='bar')
-
-    return sorted_feature_indices
+    return scores
