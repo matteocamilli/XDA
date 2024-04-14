@@ -1,7 +1,9 @@
 # Create a dataset starting from a series of semantic space variables ranges
-import numpy as np
-from MDP_Dataset_Builder.RescueRobot import config
 import random
+
+import numpy as np
+
+import config
 
 FLOAT_MULTIPLIER = 2
 

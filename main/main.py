@@ -44,23 +44,22 @@ if __name__ == '__main__':
     # evaluate adaptations
     evaluate = True
 
-    ds = pd.read_csv('../datasets/uav.csv')
-    featureNames = ["formation",
-                    "flying_speed",
-                    "countermeasure",
+    ds = pd.read_csv('../datasets/drivev2.csv')
+    featureNames = ["car_speed",
+                    "p_x",
+                    "p_y",
+                    "orientation",
                     "weather",
-                    "day_time",
-                    "threat_range",
-                    "#threats"]
-    controllableFeaturesNames = featureNames[0:3]
-    externalFeaturesNames = featureNames[3:7]
+                    "road_shape"]
+    controllableFeaturesNames = featureNames[0:1]
+    externalFeaturesNames = featureNames[1:6]
 
     # for simplicity, we consider all the ideal points to be 0 or 100
     # so that we just need to consider ideal directions instead
     # -1 => minimize, 1 => maximize
-    optimizationDirections = [1, -1, -1]
+    optimizationDirections = [1]
 
-    reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5", "req_6", "req_7", "req_8", "req_9", "req_10", "req_11"]
+    reqs = ["req_0", "req_1", "req_2"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
@@ -86,26 +85,26 @@ if __name__ == '__main__':
                                      np.ravel(y_test.loc[:, req])))
         print("=" * 100)
 
-    controllableFeatureDomains = np.array([[0, 1], [5.0, 50.0], [0, 1]])
+    controllableFeatureDomains = np.array([[5.0, 50.0]])
 
     # initialize planners
     customPlanner = CustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                  controllableFeaturesNames, [0, 1, 2], controllableFeatureDomains,
+                                  controllableFeaturesNames, [0], controllableFeatureDomains,
                                   optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
     SHAPcustomPlanner = SHAPCustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                          controllableFeaturesNames, [0, 1, 2], controllableFeatureDomains,
+                                          controllableFeaturesNames, [0], controllableFeatureDomains,
                                           optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
     PCAcustomPlanner = PCACustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                        controllableFeaturesNames, [0, 1, 2], controllableFeatureDomains,
+                                        controllableFeaturesNames, [0], controllableFeatureDomains,
                                         optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
     FICustomPlanner = FICustomPlanner(X_train, y_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                      controllableFeaturesNames, [0, 1, 2], controllableFeatureDomains,
+                                      controllableFeaturesNames, [0], controllableFeatureDomains,
                                       optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
-    nsga3Planner = NSGA3Planner(models, targetConfidence, [0, 1, 2], controllableFeatureDomains,
+    nsga3Planner = NSGA3Planner(models, targetConfidence, [0], controllableFeatureDomains,
                                 optimizationDirections, successScore, optimizationScore)
 
     # create lime explainer
