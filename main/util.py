@@ -68,3 +68,13 @@ def readFromCsv(path):
         results[c] = results[c].apply(lambda x: np.fromstring(x[1:-1], dtype=float, sep=' '))
 
     return results
+
+def readFromCsvCustom(path):
+    results = pd.read_csv(path)
+    columns = ["custom_adaptation", "custom_confidence"]
+
+    # numpy arrays are read as strings, must convert them back in arrays
+    for c in columns:
+        results[c] = results[c].apply(lambda x: np.fromstring(x[1:-1], dtype=float, sep=' '))
+
+    return results

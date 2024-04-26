@@ -44,22 +44,23 @@ if __name__ == '__main__':
     # evaluate adaptations
     evaluate = True
 
-    ds = pd.read_csv('../datasets/drivev2.csv')
-    featureNames = ["car_speed",
-                    "p_x",
-                    "p_y",
-                    "orientation",
+    ds = pd.read_csv('../datasets/uav.csv')
+    featureNames = ["formation",
+                    "flying_speed",
+                    "countermeasure",
                     "weather",
-                    "road_shape"]
-    controllableFeaturesNames = featureNames[0:1]
-    externalFeaturesNames = featureNames[1:6]
+                    "day_time",
+                    "threat_range",
+                    "#threats"]
+    controllableFeaturesNames = featureNames[0:3]
+    externalFeaturesNames = featureNames[4:7]
 
     # for simplicity, we consider all the ideal points to be 0 or 100
     # so that we just need to consider ideal directions instead
     # -1 => minimize, 1 => maximize
-    optimizationDirections = [1]
+    optimizationDirections = [1, 1, -1]
 
-    reqs = ["req_0", "req_1", "req_2"]
+    reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5", "req_6", "req_7", "req_8", "req_9", "req_10", "req_11"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
@@ -85,26 +86,26 @@ if __name__ == '__main__':
                                      np.ravel(y_test.loc[:, req])))
         print("=" * 100)
 
-    controllableFeatureDomains = np.array([[5.0, 50.0]])
+    controllableFeatureDomains = np.array([[0, 1], [5.0, 50.0], [0, 1]])
 
     # initialize planners
     customPlanner = CustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                  controllableFeaturesNames, [0], controllableFeatureDomains,
+                                  controllableFeaturesNames, [0, 1, 2], controllableFeatureDomains,
                                   optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
     SHAPcustomPlanner = SHAPCustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                          controllableFeaturesNames, [0], controllableFeatureDomains,
+                                          controllableFeaturesNames, [0, 1, 2], controllableFeatureDomains,
                                           optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
     PCAcustomPlanner = PCACustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                        controllableFeaturesNames, [0], controllableFeatureDomains,
+                                        controllableFeaturesNames, [0, 1, 2], controllableFeatureDomains,
                                         optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
     FICustomPlanner = FICustomPlanner(X_train, y_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                      controllableFeaturesNames, [0], controllableFeatureDomains,
+                                      controllableFeaturesNames, [0, 1, 2], controllableFeatureDomains,
                                       optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
-    nsga3Planner = NSGA3Planner(models, targetConfidence, [0], controllableFeatureDomains,
+    nsga3Planner = NSGA3Planner(models, targetConfidence, [0, 1, 2], controllableFeatureDomains,
                                 optimizationDirections, successScore, optimizationScore)
 
     # create lime explainer
@@ -321,28 +322,28 @@ if __name__ == '__main__':
 
         if SHAPcustomAdaptation is not None and nsga3Adaptation is not None:
             meanCustomScoreSHAP = (meanCustomScoreSHAP * (k - 1 - failedAdaptationsSHAP) + SHAPcustomScore) / (
-                        k - failedAdaptationsSHAP)
+                    k - failedAdaptationsSHAP)
             meanNSGA3Score = (meanNSGA3Score * (k - 1 - failedAdaptationsSHAP) + nsga3Score) / (
-                        k - failedAdaptationsSHAP)
+                    k - failedAdaptationsSHAP)
             meanScoreDiffSHAP = (meanScoreDiffSHAP * (k - 1 - failedAdaptationsSHAP) + scoreDiff) / (
-                        k - failedAdaptationsSHAP)
+                    k - failedAdaptationsSHAP)
             meanScoreImprovementSHAP = meanScoreDiffSHAP / meanNSGA3Score
             print("Mean score diff SHAP:        " + str(meanScoreDiffSHAP))
             print("Mean score improvement SHAP: " + "{:.2%}".format(meanScoreImprovementSHAP))
 
         if PCAcustomAdaptation is not None and nsga3Adaptation is not None:
             meanCustomScorePCA = (meanCustomScorePCA * (k - 1 - failedAdaptationsPCA) + PCAcustomScore) / (
-                        k - failedAdaptationsPCA)
+                    k - failedAdaptationsPCA)
             meanNSGA3Score = (meanNSGA3Score * (k - 1 - failedAdaptationsPCA) + nsga3Score) / (k - failedAdaptationsPCA)
             meanScoreDiffPCA = (meanScoreDiffPCA * (k - 1 - failedAdaptationsPCA) + scoreDiff) / (
-                        k - failedAdaptationsPCA)
+                    k - failedAdaptationsPCA)
             meanScoreImprovementPCA = meanScoreDiffPCA / meanNSGA3Score
             print("Mean score diff:        " + str(meanScoreDiffPCA))
             print("Mean score improvement: " + "{:.2%}".format(meanScoreImprovementPCA))
 
         if FIcustomAdaptation is not None and nsga3Adaptation is not None:
             meanCustomScoreFI = (meanCustomScoreFI * (k - 1 - failedAdaptationsFI) + FIcustomScore) / (
-                        k - failedAdaptationsFI)
+                    k - failedAdaptationsFI)
             meanNSGA3Score = (meanNSGA3Score * (k - 1 - failedAdaptationsFI) + nsga3Score) / (k - failedAdaptationsFI)
             meanScoreDiffFI = (meanScoreDiffFI * (k - 1 - failedAdaptationsFI) + scoreDiff) / (k - failedAdaptationsFI)
             meanScoreImprovementFI = meanScoreDiffPCA / meanNSGA3Score
@@ -356,43 +357,43 @@ if __name__ == '__main__':
                         nsga3Score, customScore, scoreDiff, scoreImprovement,
                         nsga3Time, customTime, speedup])
 
-        resultsSHAP.append([nsga3Adaptation, SHAPcustomAdaptation,
-                            nsga3Confidence, SHAPcustomConfidence,
-                            nsga3Score, SHAPcustomScore, SHAPscoreDiff, SHAPscoreImprovement,
-                            nsga3Time, SHAPcustomTime, SHAPspeedup])
+        resultsSHAP.append([SHAPcustomAdaptation,
+                            SHAPcustomConfidence,
+                            SHAPcustomScore, SHAPscoreDiff, SHAPscoreImprovement,
+                            SHAPcustomTime, SHAPspeedup])
 
-        resultsPCA.append([nsga3Adaptation, PCAcustomAdaptation,
-                           nsga3Confidence, PCAcustomConfidence,
-                           nsga3Score, PCAcustomScore, PCAscoreDiff, PCAscoreImprovement,
-                           nsga3Time, PCAcustomTime, PCAspeedup])
+        resultsPCA.append([PCAcustomAdaptation,
+                           PCAcustomConfidence,
+                           PCAcustomScore, PCAscoreDiff, PCAscoreImprovement,
+                           PCAcustomTime, PCAspeedup])
 
-        resultsFI.append([nsga3Adaptation, FIcustomAdaptation,
-                          nsga3Confidence, FIcustomConfidence,
-                          nsga3Score, FIcustomScore, FIscoreDiff, FIscoreImprovement,
-                          nsga3Time, FIcustomTime, FIspeedup])
+        resultsFI.append([FIcustomAdaptation,
+                          FIcustomConfidence,
+                          FIcustomScore, FIscoreDiff, FIscoreImprovement,
+                          FIcustomTime, FIspeedup])
 
     results = pd.DataFrame(results, columns=["nsga3_adaptation", "custom_adaptation",
                                              "nsga3_confidence", "custom_confidence",
                                              "nsga3_score", "custom_score", "score_diff", "score_improvement[%]",
                                              "nsga3_time", "custom_time", "speed-up"])
 
-    resultsSHAP = pd.DataFrame(resultsSHAP, columns=["nsga3_adaptation", "custom_adaptation",
-                                                     "nsga3_confidence", "custom_confidence",
-                                                     "nsga3_score", "custom_score", "score_diff",
+    resultsSHAP = pd.DataFrame(resultsSHAP, columns=["custom_adaptation",
+                                                     "custom_confidence",
+                                                     "custom_score", "score_diff",
                                                      "score_improvement[%]",
-                                                     "nsga3_time", "custom_time", "speed-up"])
+                                                     "custom_time", "speed-up"])
 
-    resultsPCA = pd.DataFrame(resultsPCA, columns=["nsga3_adaptation", "custom_adaptation",
-                                                   "nsga3_confidence", "custom_confidence",
-                                                   "nsga3_score", "custom_score", "score_diff",
+    resultsPCA = pd.DataFrame(resultsPCA, columns=["custom_adaptation",
+                                                   "custom_confidence",
+                                                   "custom_score", "score_diff",
                                                    "score_improvement[%]",
-                                                   "nsga3_time", "custom_time", "speed-up"])
+                                                   "custom_time", "speed-up"])
 
-    resultsFI = pd.DataFrame(resultsFI, columns=["nsga3_adaptation", "custom_adaptation",
-                                                  "nsga3_confidence", "custom_confidence",
-                                                  "nsga3_score", "custom_score", "score_diff",
-                                                  "score_improvement[%]",
-                                                  "nsga3_time", "custom_time", "speed-up"])
+    resultsFI = pd.DataFrame(resultsFI, columns=["custom_adaptation",
+                                                 "custom_confidence",
+                                                 "custom_score", "score_diff",
+                                                 "score_improvement[%]",
+                                                 "custom_time", "speed-up"])
 
     path = "../results"
     if not os.path.exists(path):
