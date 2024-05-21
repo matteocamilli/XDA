@@ -71,35 +71,33 @@ class CustomPlanner:
 
     def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures,
                           tempExcludedFeatures):
-        # select a feature to modify
-        featureIndex = None
+
         controllableIndex = None
         minConfidenceLoss = None
-        for i, index in enumerate(self.controllableFeatureIndices):
+        for i in self.controllableFeatureIndices:
             if i not in excludedFeatures and i not in tempExcludedFeatures:
-                slope = pdp.getSlope(self.summaryPdps[i], adaptation[index], neighborIndex)
+                slope = pdp.getSlope(self.summaryPdps[i], adaptation[i], neighborIndex)
                 confidenceLoss = slope * self.optimizationDirections[i]
                 if minConfidenceLoss is None or confidenceLoss < minConfidenceLoss:
-                    featureIndex = index
                     controllableIndex = i
                     minConfidenceLoss = confidenceLoss
 
         # return if no feature can be modified
-        if featureIndex is None:
+        if controllableIndex is None:
             return None, None
 
         # modify the selected feature
         newAdaptation = np.copy(adaptation)
-        newAdaptation[featureIndex] += self.optimizationDirections[controllableIndex] * self.delta
+        newAdaptation[controllableIndex] += self.optimizationDirections[controllableIndex] * self.delta
 
         featureMin = self.controllableFeatureDomains[controllableIndex, 0]
         featureMax = self.controllableFeatureDomains[controllableIndex, 1]
 
-        if newAdaptation[featureIndex] < featureMin:
-            newAdaptation[featureIndex] = featureMin
+        if newAdaptation[controllableIndex] < featureMin:
+            newAdaptation[controllableIndex] = featureMin
             excludedFeatures.append(controllableIndex)
-        elif newAdaptation[featureIndex] > featureMax:
-            newAdaptation[featureIndex] = featureMax
+        elif newAdaptation[controllableIndex] > featureMax:
+            newAdaptation[controllableIndex] = featureMax
             excludedFeatures.append(controllableIndex)
 
         newConfidence = vecPredictProba(self.reqClassifiers, [newAdaptation])[0]
@@ -117,7 +115,6 @@ class CustomPlanner:
     def findAdaptation(self, row):
         n_controllableFeatures = len(self.controllableFeatureIndices)
 
-        # find neighbors
         neighbors = np.ravel(self.knn.kneighbors([row], self.n_neighbors, False))
 
         # starting solutions
@@ -149,12 +146,11 @@ class CustomPlanner:
                             # rightmost maximal
                             x = maximals[len(maximals) - 1]
 
-                        newAdaptation = np.copy(adaptation)
-                        newAdaptation[self.controllableFeatureIndices[controllableIndex]] = x
-                        adaptations.append(newAdaptation)
-                        excludedFeatures.append(controllableIndex)
-                        break
-
+                    newAdaptation = np.copy(adaptation)
+                    newAdaptation[self.controllableFeatureIndices[controllableIndex]] = x
+                    adaptations.append(newAdaptation)
+                    excludedFeatures.append(controllableIndex)
+                    break
         # remove duplicate solutions
         adaptations = np.unique(adaptations, axis=0)
 
@@ -183,7 +179,6 @@ class CustomPlanner:
             """
 
             adaptations = np.append(adaptations, possibilities, axis=0)
-
         # remove duplicate solutions again
         adaptations = np.unique(adaptations, axis=0)
 
@@ -267,7 +262,6 @@ class CustomPlanner:
         print("\nBest starting adaptations confidence:")
         print(bestAdaptationsConfidence)
         """
-
         # enhance solutions
         optimizationSteps = [0] * len(bestAdaptations)
         for i in range(len(bestAdaptations)):
@@ -276,7 +270,9 @@ class CustomPlanner:
             tempExcludedFeatures = []
             adaptation = bestAdaptations[i]
             confidence = bestAdaptationsConfidence[i]
+
             neighborIndex = np.ravel(self.knn.kneighbors([adaptation], 1, False))[0]
+
             while len(excludedFeatures) + len(tempExcludedFeatures) < n_controllableFeatures:
                 # recalculate neighbor only once every n function calls lighten the computation
                 if calls >= 10:
@@ -284,13 +280,13 @@ class CustomPlanner:
                     # print(neighborIndex)
                     calls = 0
                 adaptation, confidence = self.optimizeScoreStep(adaptation, confidence, validAdaptationFound,
-                                                                neighborIndex, excludedFeatures, tempExcludedFeatures)
+                                                                neighborIndex, excludedFeatures,
+                                                                tempExcludedFeatures)
                 optimizationSteps[i] += 1
                 calls += 1
 
             bestAdaptations[i] = adaptation
             bestAdaptationsConfidence[i] = confidence
-
         # print("\nScore optimization steps: " + str(optimizationSteps))
 
         # remove duplicate solutions (there can be new duplicates after the optimization phase)

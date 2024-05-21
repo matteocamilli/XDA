@@ -53,10 +53,11 @@ def evaluateAdaptations(dataset_custom, dataset_SHAP, dataset_PCA, dataset_FI, f
     nsga3Adaptations = pd.DataFrame(dataset_custom['nsga3_adaptation'].to_list(), columns=featureNames)
 
     evaluateDataset(customAdaptations, "customDataset")
+    evaluateDataset(nsga3Adaptations, "nsga3Dataset")
     evaluateDataset(SHAPAdaptations, "SHAPDataset")
     evaluateDataset(PCAAdaptations, "PCADataset")
     evaluateDataset(FIAdaptations, "FIDataset")
-    evaluateDataset(nsga3Adaptations, "nsga3Dataset")
+
 
 
 def readFromCsv(path):

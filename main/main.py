@@ -15,6 +15,7 @@ import explainability_techniques.LIME as lime
 from CustomPlanner import CustomPlanner
 from NSGA3Planner import NSGA3Planner
 from util import vecPredictProba, evaluateAdaptations
+import multilabel_oversampling as mo
 
 
 # success score function (based on the signed distance with respect to the target success probabilities)
@@ -44,21 +45,15 @@ if __name__ == '__main__':
     # evaluate adaptations
     evaluate = True
 
-    ds = pd.read_csv('../datasets/uav.csv')
-    featureNames = ["formation",
-                    "flying_speed",
-                    "countermeasure",
-                    "weather",
-                    "day_time",
-                    "threat_range",
-                    "#threats"]
+    ds = pd.read_csv('../datasets/uavLight3.csv')
+    featureNames = ["formation","flying_speed","countermeasure","weather","day_time","threat_range","#threats"]
     controllableFeaturesNames = featureNames[0:3]
-    externalFeaturesNames = featureNames[4:7]
+    externalFeaturesNames = featureNames[3:7]
 
     # for simplicity, we consider all the ideal points to be 0 or 100
     # so that we just need to consider ideal directions instead
     # -1 => minimize, 1 => maximize
-    optimizationDirections = [1, 1, -1]
+    optimizationDirections = [1, -1, -1]
 
     reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5", "req_6", "req_7", "req_8", "req_9", "req_10", "req_11"]
 
@@ -79,11 +74,16 @@ if __name__ == '__main__':
     models = []
     for req in reqs:
         print(Fore.RED + "Requirement: " + req + "\n" + Style.RESET_ALL)
-
-        models.append(constructModel(X_train.values,
-                                     X_test.values,
-                                     np.ravel(y_train.loc[:, req]),
-                                     np.ravel(y_test.loc[:, req])))
+        ds_req = pd.read_csv(f'bilanciato_{req}.csv')
+        X_req = ds_req.loc[:, featureNames]
+        y_req = ds_req.loc[:, req]
+        X_req_train, X_req_test, y_req_train, y_req_test = train_test_split(
+            X_req, y_req, test_size=0.4, random_state=42
+        )
+        models.append(constructModel(X_req_train.values,
+                                     X_req_test.values,
+                                     np.ravel(y_req_train),
+                                     np.ravel(y_req_test)))
         print("=" * 100)
 
     controllableFeatureDomains = np.array([[0, 1], [5.0, 50.0], [0, 1]])

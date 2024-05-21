@@ -31,7 +31,7 @@ IDEAL_SPOTS = {
     }
 }
 
-constraints = compute_constraints([.035, .04, .045, .055], IDEAL_SPOTS)
+constraints = compute_constraints([.05, .07, .1, .15], IDEAL_SPOTS)
 
 CONSTRAINTS = [
     # SINGLE CONSTRAINTS
