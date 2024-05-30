@@ -18,14 +18,14 @@ class SHAPCustomPlanner(CustomPlanner):
                          optimizationDirections, optimizationScoreFunction, delta, plotsPath)
 
         self.quantizer = faiss.IndexFlatL2(X.shape[1])
-        self.nlist = 50
+        self.nlist = 10
         self.index = faiss.IndexIVFFlat(self.quantizer, X.shape[1], self.nlist)
         self.index.train(X)
         self.index.add(X)
 
         startTime = time.time()
-
-        cumulative_importance = np.zeros(len(controllableFeatureIndices))
+        """
+        cumulative_importance = np.zeros(len(self.controllableFeatureIndices))
 
         for i, reqClassifier in enumerate(self.reqClassifiers):
             feature_indices = shapClassifier(reqClassifier, X, controllableFeatureIndices)
@@ -35,7 +35,8 @@ class SHAPCustomPlanner(CustomPlanner):
         self.controllableFeatureIndices = np.argsort(cumulative_importance)[::-1]
         print(cumulative_importance)
         print(self.controllableFeatureIndices)
-
+        """
+        self.controllableFeatureIndices = [0]
         endTime = time.time()
 
         print("SHAP classifier duration: " + str(endTime - startTime) + " s")
@@ -125,7 +126,7 @@ class SHAPCustomPlanner(CustomPlanner):
             maximals = [pdp.getMaximalsOfLine(self.summaryPdps[i], neighborIndex) for i in
                         self.controllableFeatureIndices]
 
-            maxPossibilities = 5000
+            maxPossibilities = 3000
             n_possibilities = np.prod([len(m) for m in maximals])
             while n_possibilities > maxPossibilities:
                 i = np.argmax([len(m) for m in maximals])

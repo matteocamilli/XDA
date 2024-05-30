@@ -18,7 +18,7 @@ class FICustomPlanner(CustomPlanner):
                          optimizationDirections, optimizationScoreFunction, delta, plotsPath)
 
         self.quantizer = faiss.IndexFlatL2(X.shape[1])
-        self.nlist = 50
+        self.nlist = 10
         self.index = faiss.IndexIVFFlat(self.quantizer, X.shape[1], self.nlist)
         self.index.train(X)
         self.index.add(X)
