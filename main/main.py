@@ -44,22 +44,25 @@ if __name__ == '__main__':
     # evaluate adaptations
     evaluate = True
 
-    ds = pd.read_csv('../datasets/drivev3.csv')
-    featureNames = ["car_speed",
-                    "p_x",
-                    "p_y",
-                    "orientation",
-                    "weather",
-                    "road_shape"]
-    controllableFeaturesNames = featureNames[0:1]
-    externalFeaturesNames = featureNames[1:6]
+    ds = pd.read_csv('../datasets/dataset5000.csv')
+    featureNames = ["cruise speed",
+                    "image resolution",
+                    "illuminance",
+                    "controls responsiveness",
+                    "power",
+                    "smoke intensity",
+                    "obstacle size",
+                    "obstacle distance",
+                    "firm obstacle"]
+    controllableFeaturesNames = featureNames[0:4]
+    externalFeaturesNames = featureNames[4:9]
 
     # for simplicity, we consider all the ideal points to be 0 or 100
     # so that we just need to consider ideal directions instead
     # -1 => minimize, 1 => maximize
-    optimizationDirections = [1]
+    optimizationDirections = [1, -1, -1, -1]
 
-    reqs = ["req_0", "req_1", "req_2"]
+    reqs = ["req_0", "req_1", "req_2", "req_3"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
@@ -92,19 +95,19 @@ if __name__ == '__main__':
                                      np.ravel(y_test.loc[:, req])))
         print("=" * 100)
 
-    controllableFeatureDomains = np.array([[5.0, 50.0]])
+    controllableFeatureDomains = np.repeat([[0, 100]], n_controllableFeatures, 0)
 
     # initialize planners
     customPlanner = CustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                  controllableFeaturesNames, [0], controllableFeatureDomains,
+                                  controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
                                   optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
     SHAPcustomPlanner = SHAPCustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                          controllableFeaturesNames, [0], controllableFeatureDomains,
+                                          controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
                                           optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
     FICustomPlanner = FICustomPlanner(X_train, y_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                      controllableFeaturesNames, [0], controllableFeatureDomains,
+                                      controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
                                       optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
     # create lime explainer

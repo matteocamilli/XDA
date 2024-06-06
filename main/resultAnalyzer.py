@@ -61,9 +61,10 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
         def y_fmt(x, y):
             return str(int(x)) + ' s'
 
+        ax1.set_yscale('log')
         ax1.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
 
-    ax1.set_yscale('log')
+    #ax1.set_yscale('log')
 
     box = ax1.get_position()
     ax1.set_position([box.x0, box.y0 + box.height * 0.1,
@@ -93,6 +94,7 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
 def personalizedBoxPlotCustom(data, name, columnNames=None, percentage=False, path=None, show=False, seconds=False,
                               legendInside=False):
     fig = plt.figure(figsize=(15, 8))  # 1500x800
+
 
     ax1 = fig.add_subplot(111)
     bp = ax1.boxplot(data, patch_artist=True, notch=True, vert=True)
@@ -130,7 +132,7 @@ def personalizedBoxPlotCustom(data, name, columnNames=None, percentage=False, pa
 
         ax1.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
 
-    ax1.set_yscale('log')
+
 
     num_boxes = len(data.T)
     num_groups = (num_boxes + 2) // 3
@@ -206,17 +208,20 @@ def personalizedBarChart(data, name, path=None, show=False, percentage=False):
 os.chdir(sys.path[0])
 evaluate = False
 
-pathToResults = "../results/autonomousDrivingv3/"
+pathToResults = "../results/"
 
-featureNames = ["car_speed",
-                    "p_x",
-                    "p_y",
-                    "orientation",
-                    "weather",
-                    "road_shape"]
+featureNames = ["cruise speed",
+                    "image resolution",
+                    "illuminance",
+                    "controls responsiveness",
+                    "power",
+                    "smoke intensity",
+                    "obstacle size",
+                    "obstacle distance",
+                    "firm obstacle"]
 
-reqs = ["req_0", "req_1", "req_2"]
-reqsNamesInGraphs = ["R1", "R2", "R3"]
+reqs = ["req_0", "req_1", "req_2", "req_3"]
+reqsNamesInGraphs = ["R1", "R2", "R3", "R4"]
 
 # read dataframe from csv
 results = readFromCsv(pathToResults + 'results.csv')

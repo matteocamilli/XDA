@@ -110,10 +110,10 @@ class FICustomPlanner(CustomPlanner):
                             x = maximals[len(maximals) - 1]
 
                     newAdaptation = np.copy(adaptation)
-                    newAdaptation[self.controllableFeatureIndices[controllableIndex]] = x
+                    newAdaptation[controllableIndex] = x
                     adaptations.append(newAdaptation)
                     excludedFeatures.append(controllableIndex)
-                    break
+
 
         # remove duplicate solutions
         adaptations = np.unique(adaptations, axis=0)
@@ -122,8 +122,9 @@ class FICustomPlanner(CustomPlanner):
             distances, neighborIndex = self.index.search(x=np.expand_dims(adaptation, axis=0), k=1)
             neighborIndex = neighborIndex[0][0]
 
-            maximals = [pdp.getMaximalsOfLine(self.summaryPdps[i], neighborIndex) for i in
-                        self.controllableFeatureIndices]
+            maximals = [0] * len(self.controllableFeatureIndices)
+            for i in self.controllableFeatureIndices:
+                maximals[i] = pdp.getMaximalsOfLine(self.summaryPdps[i], neighborIndex)
 
             maxPossibilities = 3000
             n_possibilities = np.prod([len(m) for m in maximals])

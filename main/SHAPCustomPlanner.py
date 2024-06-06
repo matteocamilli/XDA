@@ -24,7 +24,7 @@ class SHAPCustomPlanner(CustomPlanner):
         self.index.add(X)
 
         startTime = time.time()
-        """
+
         cumulative_importance = np.zeros(len(self.controllableFeatureIndices))
 
         for i, reqClassifier in enumerate(self.reqClassifiers):
@@ -35,13 +35,10 @@ class SHAPCustomPlanner(CustomPlanner):
         self.controllableFeatureIndices = np.argsort(cumulative_importance)[::-1]
         print(cumulative_importance)
         print(self.controllableFeatureIndices)
-        """
-        self.controllableFeatureIndices = [0]
-        endTime = time.time()
 
+        endTime = time.time()
         print("SHAP classifier duration: " + str(endTime - startTime) + " s")
         print("=" * 100)
-
 
 
     def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures,
@@ -78,6 +75,7 @@ class SHAPCustomPlanner(CustomPlanner):
         else:
             tempExcludedFeatures.clear()
 
+
         return newAdaptation, newConfidence
 
     def findAdaptation(self, row):
@@ -111,10 +109,10 @@ class SHAPCustomPlanner(CustomPlanner):
                             x = maximals[len(maximals) - 1]
 
                     newAdaptation = np.copy(adaptation)
-                    newAdaptation[self.controllableFeatureIndices[controllableIndex]] = x
+                    newAdaptation[controllableIndex] = x
                     adaptations.append(newAdaptation)
                     excludedFeatures.append(controllableIndex)
-                    break
+
         # remove duplicate solutions
         adaptations = np.unique(adaptations, axis=0)
 
@@ -123,8 +121,9 @@ class SHAPCustomPlanner(CustomPlanner):
             distances, neighborIndex = self.index.search(x=np.expand_dims(adaptation, axis=0), k=1)
             neighborIndex = neighborIndex[0][0]
 
-            maximals = [pdp.getMaximalsOfLine(self.summaryPdps[i], neighborIndex) for i in
-                        self.controllableFeatureIndices]
+            maximals = [0] * len(self.controllableFeatureIndices)
+            for i in self.controllableFeatureIndices:
+                maximals[i] = pdp.getMaximalsOfLine(self.summaryPdps[i], neighborIndex)
 
             maxPossibilities = 3000
             n_possibilities = np.prod([len(m) for m in maximals])
