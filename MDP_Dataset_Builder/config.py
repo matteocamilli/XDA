@@ -1,4 +1,3 @@
-from utils.constraints_builder import compute_constraints
 import argparse
 
 MAX_SAMPLES = None  # 1000
@@ -6,60 +5,80 @@ INDEX_TO_RUN = None  # 0
 TOTAL_TO_RUN = None  # 1
 PATH_TO_DATASET = None  # "./starting_combinations.npy"
 
-
 SS_VARIABLES = {
-    "car_speed": {"domain": float, "range": [5.0, 50.0]},
-    "p_x": {"domain": float, "range": [0.0, 10.0]},
-    "p_y": {"domain": float, "range": [0.0, 10.0]},
-    "orientation": {"domain": int, "range": [-30, 30]},
-    "weather": {"domain": int, "range": [0, 2]},
-    "road_shape": {"domain": int, "range": [0, 2]},
+    "cruise speed": {"domain": float, "range": [0, 100]},
+    "image resolution": {"domain": float, "range": [0, 100]},
+    "illuminance": {"domain": float, "range": [0, 100]},
+    "controls responsiveness": {"domain": float, "range": [0, 100]},
+    "power": {"domain": int, "range": [0, 100]},
+    "smoke intensity": {"domain": float, "range": [0, 100]},
+    "obstacle size": {"domain": float, "range": [0, 100]},
+    "obstacle distance": {"domain": float, "range": [0, 100]},
+    "firm obstacle": {"domain": int, "range": [0, 1]},
 }
 
-# Constraints definition
-
-IDEAL_SPOTS = {
+CONSTRAINT_EXAMPLE = {
     "S0": {
-        "a": [0.001, 0.999]
+        "a": [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]]
     },
-    "S2": {
-        "b": [0.98, 0.015, 0.005],
+    "S5": {
+        "g": [[0.0, 1.0], [0.0, 1.0], [0.0, 1.0]]
+    },
+    "S10": {
+        "l": [[0.0, 1.0], [0.0, 1.0]],
+        "m": [[0.0, 1.0], [0.0, 1.0]],
     }
 }
 
-#constraints = compute_constraints([.025, .03, .04, .045], IDEAL_SPOTS)
-constraints = compute_constraints([.001, .002], IDEAL_SPOTS)
+low_missclassification = {
+    "S0": {
+        "a": [[0.0, 1.0], [0.0, 1.0], [0.0, 0.15]],
+        "b": [[0.0, 0.15], [0.0, 1.0]]
+    }
+}
+
+low_contact = {
+    "S0": {
+        "a": [[0.0, 0.05], [0.0, 1.0], [0.0, 1.0]]
+    },
+    "S5": {
+        "g": [[0.0, 0.05], [0.0, 1.0], [0.0, 1.0]]
+    },
+    "S6": {
+        "h": [[0.0, 0.05], [0.0, 1.0]]
+    }
+}
+
+low_crash = {
+    "S10": {
+        "l": [[0.0, 1.0], [0.0, 0.1]],
+        "m": [[0.0, 0.1], [0.0, 1.0]]
+    }
+}
+
+safe = {
+    "S5": {
+        "g": [[0.0, 1.0], [0.0, 0.15], [0.0, 1.0]]
+    },
+    "S8": {
+        "j": [[0.0, 1.0], [0.0, 0.15]]
+    }
+}
+
+test = {
+    "S6": {
+        "h": [[0.0, 0.03], [0.0, 1.0]]
+    }
+}
+
 
 CONSTRAINTS = [
-    # SINGLE CONSTRAINTS
-    {
-        "S0": {
-            "a": constraints["S0"]["a"][0]
-        }
-    },
-    {
-        "S2": {
-            "b": constraints["S2"]["b"][1]
-        }
-    },
-    {
-        "S0": {
-            "a": constraints["S0"]["a"][1]
-        },
-        "S2": {
-            "b": constraints["S2"]["b"][1]
-        }
-    }
+    #test,
+    low_missclassification,
+    low_contact,
+    low_crash,
+    safe
 ]
-
-MINIMAL_CONSTRAINTS = {
-    "S0": {
-        "a": constraints["S0"]["a"][0]
-    },
-    "S2": {
-        "b": constraints["S2"]["b"][1]
-    }
-}
 
 # Load arguments from cli
 
@@ -90,16 +109,3 @@ if args.get("total_executions") is not None:
 if args.get("path-to-dataset") is not None:
     print(f"Using dataset: {args.get('path-to-dataset')}")
     PATH_TO_DATASET = args.get("path-to-dataset")
-
-# _template = {
-#     "S0": {
-#         "a": constraints["S0"]["a"][0]
-#     },
-#     "S5": {
-#         "g": constraints["S5"]["g"][0]
-#     },
-#     "S10": {
-#         "l": constraints["S10"]["l"][0],
-#         "m": constraints["S10"]["m"][0]
-#     }
-# }
