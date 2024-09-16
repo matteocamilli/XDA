@@ -23,12 +23,13 @@ def explain(explainer, model, row):
 
 
 def saveExplanation(explanation, path=None):
-    explanation.as_pyplot_figure()
+    fig = explanation.as_pyplot_figure()
     plt.tight_layout()
     if path is not None:
         plt.savefig(path)
     # plt.show()
     plt.clf()
+    plt.close(fig)
 
 
 def sortExplanation(explanation, reverse=False):

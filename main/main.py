@@ -7,14 +7,18 @@ import pandas as pd
 import numpy as np
 from colorama import Fore, Style
 from sklearn.model_selection import train_test_split
-from SHAPCustomPlanner import SHAPCustomPlanner
-from FICustomPlanner import FICustomPlanner
+from CustomPlanner import CustomPlanner
 from model.ModelConstructor import constructModel
 import explainability_techniques.LIME as lime
-from CustomPlanner import CustomPlanner
 from NSGA3Planner import NSGA3Planner
+from SHAPCustomPlanner import SHAPCustomPlanner
+from FICustomPlanner import FICustomPlanner
 from util import vecPredictProba, evaluateAdaptations
-import multilabel_oversampling as mo
+from FITEST import FitestPlanner
+from RandomCustomPlanner import RandomPlanner
+
+
+# import multilabel_oversampling as mo
 
 
 # success score function (based on the signed distance with respect to the target success probabilities)
@@ -44,25 +48,18 @@ if __name__ == '__main__':
     # evaluate adaptations
     evaluate = True
 
-    ds = pd.read_csv('../datasets/dataset5000.csv')
-    featureNames = ["cruise speed",
-                    "image resolution",
-                    "illuminance",
-                    "controls responsiveness",
-                    "power",
-                    "smoke intensity",
-                    "obstacle size",
-                    "obstacle distance",
-                    "firm obstacle"]
-    controllableFeaturesNames = featureNames[0:4]
-    externalFeaturesNames = featureNames[4:9]
+    ds = pd.read_csv('../datasets/uavv3.csv')
+    featureNames = ["formation","flying_speed","countermeasure","weather","day_time","threat_range","#threats",]
+    controllableFeaturesNames = featureNames[0:6]
+    externalFeaturesNames = featureNames[6:7]
+    controllableFeatureIndices = [0, 1, 2, 3, 4, 5]
 
     # for simplicity, we consider all the ideal points to be 0 or 100
     # so that we just need to consider ideal directions instead
     # -1 => minimize, 1 => maximize
-    optimizationDirections = [1, -1, -1, -1]
+    optimizationDirections = [1, 1, -1, 1, 1, 1]
 
-    reqs = ["req_0", "req_1", "req_2", "req_3"]
+    reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5", "req_6", "req_7", "req_8", "req_9", "req_10", "req_11"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
@@ -95,20 +92,36 @@ if __name__ == '__main__':
                                      np.ravel(y_test.loc[:, req])))
         print("=" * 100)
 
-    controllableFeatureDomains = np.repeat([[0, 100]], n_controllableFeatures, 0)
-
+    controllableFeatureDomains = np.array([[0, 1], [5.0, 50.0], [0, 1], [1, 4], [0,23], [1000.0, 40000.0]])
+    discreteIndices = [0, 2, 3, 4]
     # initialize planners
+
     customPlanner = CustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                  controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
+                                  controllableFeaturesNames, controllableFeatureIndices, controllableFeatureDomains,
                                   optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
+    nsga3Planner = NSGA3Planner(models, targetConfidence, controllableFeatureIndices, controllableFeatureDomains,
+                                optimizationDirections, successScore, optimizationScore)
+
     SHAPcustomPlanner = SHAPCustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                          controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
+                                          controllableFeaturesNames, controllableFeatureIndices,
+                                          controllableFeatureDomains,
                                           optimizationDirections, optimizationScore, 1, "../explainability_plots")
 
     FICustomPlanner = FICustomPlanner(X_train, y_train, n_neighbors, n_startingSolutions, models, targetConfidence,
-                                      controllableFeaturesNames, [0, 1, 2, 3], controllableFeatureDomains,
+                                      controllableFeaturesNames, controllableFeatureIndices, controllableFeatureDomains,
                                       optimizationDirections, optimizationScore, 1, "../explainability_plots")
+
+    pop_size = nsga3Planner.algorithm.pop_size
+
+    FitestPlanner = FitestPlanner(models, targetConfidence,
+                                  controllableFeatureIndices, controllableFeatureDomains, optimizationScore,
+                                  successScore,
+                                  pop_size,
+                                  discreteIndices, 4, [0.8, 0.8, 0.8, 0.8])
+
+    RandomPlanner = RandomPlanner(controllableFeatureIndices, controllableFeatureDomains, discreteIndices, models,
+                                  optimizationScore)
 
     # create lime explainer
     limeExplainer = lime.createLimeExplainer(X_train)
@@ -117,20 +130,31 @@ if __name__ == '__main__':
     meanCustomScore = 0
     meanCustomScoreSHAP = 0
     meanCustomScoreFI = 0
+    meanCustomScoreFitest = 0
+    meanCustomScoreRandom = 0
     meanSpeedupSHAP = 0
     meanSpeedupFI = 0
+    meanSpeedupFitest = 0
+    meanSpeedupRandom = 0
     meanScoreDiffSHAP = 0
     meanScoreDiffFI = 0
+    meanScoreDiffFitest = 0
+    meanScoreDiffRandom = 0
     failedAdaptations = 0
     failedAdaptationsSHAP = 0
     failedAdaptationsFI = 0
+    failedAdaptationsFitest = 0
+    failedAdaptationsRandom = 0
 
     # adaptations
     results = []
     resultsSHAP = []
     resultsFI = []
+    resultsFitest = []
+    resultsRandom = []
     customDataset = []
     nsga3Dataset = []
+    resultsNSGA = []
 
     path = "../explainability_plots/adaptations"
     if not os.path.exists(path):
@@ -213,21 +237,79 @@ if __name__ == '__main__':
         print("Custom FI algorithm execution time: " + str(FIcustomTime) + " s")
         print("-" * 100)
 
-        # genetic algorithm
+        startTime = time.time()
+        FitestcustomAdaptation, FitestcustomConfidence, FitestcustomScore = FitestPlanner.run_search(row)
+        endTime = time.time()
+        FitestcustomTime = endTime - startTime
+
+        if FitestcustomAdaptation is not None:
+            for i, req in enumerate(reqs):
+                lime.saveExplanation(lime.explain(limeExplainer, models[i], FitestcustomAdaptation),
+                                     path + "/" + str(k) + "_" + req + "_final")
+
+            print("Best adaptation Fitest:                 " + str(FitestcustomAdaptation[0:n_controllableFeatures]))
+            print("Model confidence Fitest:                " + str(FitestcustomConfidence))
+            print("Adaptation score Fitest:                " + str(FitestcustomScore) + " / 400")
+        else:
+            print("No adaptation found")
+            FitestcustomScore = None
+
+        print("Fitest algorithm execution time: " + str(FitestcustomTime) + " s")
+        print("-" * 100)
+
+        startTime = time.time()
+        RandomCustomAdaptation, RandomCustomConfidence, RandomCustomScore = RandomPlanner.findAdaptation(row)
+        endTime = time.time()
+        RandomcustomTime = endTime - startTime
+
+        if RandomCustomAdaptation is not None:
+            for i, req in enumerate(reqs):
+                lime.saveExplanation(lime.explain(limeExplainer, models[i], RandomCustomAdaptation),
+                                     path + "/" + str(k) + "_" + req + "_final")
+
+            print("Best adaptation Random:                 " + str(RandomCustomAdaptation[0:n_controllableFeatures]))
+            print("Model confidence Random:                " + str(RandomCustomConfidence))
+            print("Adaptation score Random:                " + str(RandomCustomScore) + " / 400")
+        else:
+            print("No adaptation found")
+            RandomCustomScore = None
+
+        print("Custom Random algorithm execution time: " + str(RandomcustomTime) + " s")
+        print("-" * 100)
+
         externalFeatures = row[n_controllableFeatures:]
 
+        startTime = time.time()
+        nsga3Adaptation, nsga3Confidence, nsga3Score = nsga3Planner.findAdaptation(externalFeatures)
+        endTime = time.time()
+        nsga3Time = endTime - startTime
+
+        print("Best NSGA3 adaptation:           " + str(nsga3Adaptation[:n_controllableFeatures]))
+        print("Model confidence:                " + str(nsga3Confidence))
+        print("Adaptation score:                " + str(nsga3Score) + " / 400")
+        print("NSGA3 execution time:            " + str(nsga3Time) + " s")
+
+        print("-" * 100)
+
+        """
         SHAPscoreDiff = None
         FIscoreDiff = None
+        FitestscoreDiff = None
+        RandomScoreDiff = None
         SHAPscoreImprovement = None
         FIscoreImprovement = None
+        FitestscoreImprovement = None
+        RandomScoreImprovement = None
 
+        
         if SHAPcustomTime == 0:
             SHAPspeedup = 0
         else:
-            SHAPspeedup = customTime / SHAPcustomTime
+            SHAPspeedup = customTime / SHAPcustomTime 
         meanSpeedupSHAP = (meanSpeedupSHAP * (k - 1) + SHAPspeedup) / k
         print(Fore.GREEN + "Speed-up SHAP: " + " " * 14 + str(SHAPspeedup) + "x")
         print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up SHAP: " + " " * 9 + str(meanSpeedupSHAP) + "x")
+
         if FIcustomTime == 0:
             FIspeedup = 0
         else:
@@ -235,6 +317,14 @@ if __name__ == '__main__':
         meanSpeedupFI = (meanSpeedupFI * (k - 1) + FIspeedup) / k
         print(Fore.GREEN + "Speed-up FI: " + " " * 14 + str(FIspeedup) + "x")
         print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up FI: " + " " * 9 + str(meanSpeedupFI) + "x")
+
+        if RandomcustomTime == 0:
+            Randomspeedup = 0
+        else:
+            Randomspeedup = customTime / RandomcustomTime
+        meanSpeedupRandom = (meanSpeedupRandom * (k - 1) + Randomspeedup) / k
+        print(Fore.GREEN + "Speed-up Random: " + " " * 14 + str(Randomspeedup) + "x")
+        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up Random: " + " " * 9 + str(meanSpeedupRandom) + "x")
 
         if SHAPcustomAdaptation is not None and customAdaptation is not None:
             SHAPscoreDiff = SHAPcustomScore - customScore
@@ -252,6 +342,30 @@ if __name__ == '__main__':
         else:
             failedAdaptationsFI += 1
 
+        if FitestcustomTime == 0:
+            Fitestspeedup = 0
+        else:
+            Fitestspeedup = customTime / FitestcustomTime
+        meanSpeedupFitest = (meanSpeedupFitest * (k - 1) + Fitestspeedup) / k
+        print(Fore.GREEN + "Speed-up Fitest: " + " " * 14 + str(Fitestspeedup) + "x")
+        print(Style.RESET_ALL + Fore.YELLOW + "Mean speed-up Fitest: " + " " * 9 + str(meanSpeedupFitest) + "x")
+
+        if FitestcustomAdaptation is not None and customAdaptation is not None:
+            FitestscoreDiff = FitestcustomScore - customScore
+            FitestscoreImprovement = FitestscoreDiff / customScore
+            print("Score diff Fitest:        " + " " * 5 + str(FitestscoreDiff))
+            print("Score improvement Fitest: " + " " * 5 + "{:.2%}".format(FitestscoreImprovement))
+        else:
+            failedAdaptationsFitest += 1
+
+        if RandomcustomAdaptation is not None and customAdaptation is not None:
+            RandomScoreDiff = RandomcustomScore - customScore
+            RandomscoreImprovement = RandomScoreDiff / customScore
+            print("Score diff Random:        " + " " * 5 + str(RandomScoreDiff))
+            print("Score improvement Random: " + " " * 5 + "{:.2%}".format(RandomscoreImprovement))
+        else:
+            failedAdaptationsRandom += 1
+
         if SHAPcustomAdaptation is not None and customAdaptation is not None:
             meanCustomScoreSHAP = (meanCustomScoreSHAP * (k - 1 - failedAdaptationsSHAP) + SHAPcustomScore) / (
                     k - failedAdaptationsSHAP)
@@ -266,55 +380,112 @@ if __name__ == '__main__':
         if FIcustomAdaptation is not None and customAdaptation is not None:
             meanCustomScoreFI = (meanCustomScoreFI * (k - 1 - failedAdaptationsFI) + FIcustomScore) / (
                     k - failedAdaptationsFI)
-            meanCustomScore = (meanCustomScore * (k - 1 - failedAdaptationsFI) + customScore) / (k - failedAdaptationsFI)
-            meanScoreDiffFI = (meanScoreDiffFI * (k - 1 - failedAdaptationsFI) + FIscoreDiff) / (k - failedAdaptationsFI)
+            meanCustomScore = (meanCustomScore * (k - 1 - failedAdaptationsFI) + customScore) / (
+                    k - failedAdaptationsFI)
+            meanScoreDiffFI = (meanScoreDiffFI * (k - 1 - failedAdaptationsFI) + FIscoreDiff) / (
+                    k - failedAdaptationsFI)
             meanScoreImprovementFI = meanScoreDiffFI / meanCustomScore
-            print("Mean score diff:        " + str(meanScoreDiffFI))
-            print("Mean score improvement: " + "{:.2%}".format(meanScoreImprovementFI))
+            print("Mean score diff FI:        " + str(meanScoreDiffFI))
+            print("Mean score improvement FI: " + "{:.2%}".format(meanScoreImprovementFI))
+        
+        if FitestcustomAdaptation is not None and customAdaptation is not None:
+            meanCustomScoreFitest = (meanCustomScoreFitest * (k - 1 - failedAdaptationsFitest) + FitestcustomScore) / (
+                    k - failedAdaptationsFitest)
+            meanCustomScore = (meanCustomScore * (k - 1 - failedAdaptationsFitest) + customScore) / (
+                    k - failedAdaptationsFitest)
+            meanScoreDiffFitest = (meanScoreDiffFitest * (k - 1 - failedAdaptationsFitest) + FitestscoreDiff) / (
+                    k - failedAdaptationsFitest)
+            meanScoreImprovementFitest = meanScoreDiffFitest / meanCustomScore
+            print("Mean score diff Fitest:        " + str(meanScoreDiffFitest))
+            print("Mean score improvement Fitest: " + "{:.2%}".format(meanScoreImprovementFitest))
+        
+        if RandomcustomAdaptation is not None and customAdaptation is not None:
+            meanCustomScoreRandom = (meanCustomScoreRandom * (k - 1 - failedAdaptationsRandom) + RandomcustomScore) / (
+                    k - failedAdaptationsRandom)
+            meanCustomScore = (meanCustomScore * (k - 1 - failedAdaptationsRandom) + customScore) / (
+                    k - failedAdaptationsRandom)
+            meanScoreDiffRandom = (meanScoreDiffRandom * (k - 1 - failedAdaptationsRandom) + RandomScoreDiff) / (
+                    k - failedAdaptationsRandom)
+            meanScoreImprovementRandom = meanScoreDiffRandom / meanCustomScore
+            print("Mean score diff Random:        " + str(meanScoreDiffRandom))
+            print("Mean score improvement Random: " + "{:.2%}".format(meanScoreImprovementRandom))
 
         print(Style.RESET_ALL + "=" * 100)
+        """
 
         results.append([customAdaptation,
                         customConfidence,
                         customScore,
                         customTime])
 
+        resultsNSGA.append([nsga3Adaptation,
+                            nsga3Confidence,
+                            nsga3Score,
+                            nsga3Time])
+
         resultsSHAP.append([SHAPcustomAdaptation,
                             SHAPcustomConfidence,
-                            SHAPcustomScore, SHAPscoreDiff, SHAPscoreImprovement,
-                            SHAPcustomTime, SHAPspeedup])
+                            SHAPcustomScore,
+                            SHAPcustomTime])
 
         resultsFI.append([FIcustomAdaptation,
                           FIcustomConfidence,
-                          FIcustomScore, FIscoreDiff, FIscoreImprovement,
-                          FIcustomTime, FIspeedup])
+                          FIcustomScore,
+                          FIcustomTime])
+
+        resultsFitest.append([FitestcustomAdaptation,
+                              FitestcustomConfidence,
+                              FitestcustomScore,
+                              FitestcustomTime])
+
+        resultsRandom.append([RandomCustomAdaptation,
+                              RandomCustomConfidence,
+                              RandomCustomScore,
+                              RandomcustomTime])
 
     results = pd.DataFrame(results, columns=["custom_adaptation",
                                              "custom_confidence",
                                              "custom_score",
                                              "custom_time"])
 
+    resultsNSGA = pd.DataFrame(resultsNSGA, columns=["custom_adaptation",
+                                                     "custom_confidence",
+                                                     "custom_score",
+                                                     "custom_time"])
+
     resultsSHAP = pd.DataFrame(resultsSHAP, columns=["custom_adaptation",
                                                      "custom_confidence",
-                                                     "custom_score", "score_diff",
-                                                     "score_improvement[%]",
-                                                     "custom_time", "speed-up"])
+                                                     "custom_score",
+                                                     "custom_time"])
 
     resultsFI = pd.DataFrame(resultsFI, columns=["custom_adaptation",
                                                  "custom_confidence",
-                                                 "custom_score", "score_diff",
-                                                 "score_improvement[%]",
-                                                 "custom_time", "speed-up"])
+                                                 "custom_score",
+                                                 "custom_time"])
+
+    resultsFitest = pd.DataFrame(resultsFitest, columns=["custom_adaptation",
+                                                         "custom_confidence",
+                                                         "custom_score",
+                                                         "custom_time"])
+
+    resultsRandom = pd.DataFrame(resultsRandom, columns=["custom_adaptation",
+                                                         "custom_confidence",
+                                                         "custom_score",
+                                                         "custom_time"])
 
     path = "../results"
     if not os.path.exists(path):
         os.makedirs(path)
+
     results.to_csv(path + "/results.csv")
     resultsSHAP.to_csv(path + "/resultsSHAP.csv")
     resultsFI.to_csv(path + "/resultsFI.csv")
+    resultsFitest.to_csv(path + "/resultsFitest.csv")
+    resultsRandom.to_csv(path + "/resultsRandom.csv")
+    resultsNSGA.to_csv(path + "/resultsNSGA.csv")
 
     if evaluate:
-        evaluateAdaptations(results, resultsSHAP, resultsFI, featureNames)
+        evaluateAdaptations(results, resultsSHAP, resultsFI, resultsFitest, resultsRandom, resultsNSGA, featureNames)
 
     programEndTime = time.time()
     totalExecutionTime = programEndTime - programStartTime

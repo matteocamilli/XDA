@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import ticker
-from matplotlib.ticker import PercentFormatter, FuncFormatter, FormatStrFormatter
 
 from util import readFromCsv, evaluateAdaptations
 
@@ -16,6 +15,30 @@ font = {'family': 'sans',
 
 matplotlib.rc('font', **font)
 
+def memoryPlot(data, path):
+
+    dataMemory = {
+        'CustomMemory' : data['CustomMemory'],
+        'SHAPMemory' : data['SHAPMemory'],
+        'FIMemory' : data['FIMemory'],
+        'FitestMemory' : data['FitestMemory'],
+        'RandomMemory' : data['RandomMemory'],
+        'NSGA3Memory' : data['NSGA3Memory']
+    }
+
+    plt.figure(figsize=(15,8))
+
+    for key in dataMemory:
+        plt.plot(dataMemory[key], label=key)
+
+    plt.xlabel('Test Number')
+    plt.ylabel('Memory Usage (MiB)')
+    plt.title('Memory Usage')
+    plt.legend()
+    plt.grid(True)
+
+    plt.savefig(path + 'Memory.png')
+
 
 def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=None, show=False, seconds=False,
                         legendInside=False):
@@ -24,15 +47,17 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
     ax1 = fig.add_subplot(111)
     bp = ax1.boxplot(data, patch_artist=True, notch=True, vert=True)
 
-    # Definizione dei colori per gli algoritmi
     algorithm_colors = [
-        '#FF5733',
-        '#6B8E23',
-        '#4169E1',
+        '#FF5733',  # Arancione acceso
+        '#6B8E23',  # Verde oliva
+        '#4169E1',  # Blu reale
+        '#FF00FF',  # Magenta
+        '#FFD700',  # Oro
+        '#00CED1',  # Turchese scuro
     ]
 
     for i, box in enumerate(bp['boxes']):
-        box.set_facecolor(algorithm_colors[i % 3])
+        box.set_facecolor(algorithm_colors[i])
 
     for whisker in bp['whiskers']:
         whisker.set(color='#8B008B', linewidth=1.5, linestyle=":")
@@ -70,11 +95,11 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
     ax1.set_position([box.x0, box.y0 + box.height * 0.1,
                       box.width, box.height * 0.9])
     if legendInside:
-        ax1.legend([bp["boxes"][0], bp["boxes"][1], bp["boxes"][2]],
-                   ["XDA", "XDA SHAP", "XDA FI"])
+        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
+                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA3"])
     else:
-        ax1.legend([bp["boxes"][0], bp["boxes"][1], bp["boxes"][2]],
-                   ["XDA", "XDA SHAP", "XDA FI"],
+        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
+                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA3"],
                    ncol=2, loc='upper center', bbox_to_anchor=(0.5, -0.1))
 
     plt.title(name)
@@ -91,22 +116,22 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
         plt.clf()
 
 
-def personalizedBoxPlotCustom(data, name, columnNames=None, percentage=False, path=None, show=False, seconds=False,
+def personalizedBoxPlotCustom(data, name, nReq, columnNames=None, percentage=False, path=None, show=False,
+                              seconds=False,
                               legendInside=False):
-    fig = plt.figure(figsize=(15, 8))  # 1500x800
-
+    fig = plt.figure(figsize=(20, 10))  # 1500x800
 
     ax1 = fig.add_subplot(111)
     bp = ax1.boxplot(data, patch_artist=True, notch=True, vert=True)
 
     algorithm_colors = [
-        '#FF5733',
-        '#6B8E23',
-        '#4169E1',
+        '#FF5733',  # Arancione acceso
+        '#6B8E23',  # Verde oliva
+        '#4169E1',  # Blu reale
+        '#FF00FF',  # Magenta
+        '#FFD700',  # Oro
+        '#00CED1',  # Turchese scuro
     ]
-
-    for i, box in enumerate(bp['boxes']):
-        box.set_facecolor(algorithm_colors[i % 3])
 
     for whisker in bp['whiskers']:
         whisker.set(color='#8B008B', linewidth=1.5, linestyle=":")
@@ -115,7 +140,7 @@ def personalizedBoxPlotCustom(data, name, columnNames=None, percentage=False, pa
         cap.set(color='#8B008B', linewidth=2)
 
     for median in bp['medians']:
-        median.set(color='red', linewidth=3)
+        median.set(color='black', linewidth=3)
 
     for flier in bp['fliers']:
         flier.set(marker='D', color='#e7298a', alpha=0.5)
@@ -132,35 +157,28 @@ def personalizedBoxPlotCustom(data, name, columnNames=None, percentage=False, pa
 
         ax1.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
 
+    num_groups = nReq
 
-
-    num_boxes = len(data.T)
-    num_groups = (num_boxes + 2) // 3
-    group_labels = ['R' + str(i + 1) for i in range(num_groups)]
-    positions = [3 * i + 2 for i in range(num_groups)]
-
-    ax1.set_xticks(positions)
-    ax1.set_xticklabels(group_labels, rotation=0, fontsize=12)
+    for i, box in enumerate(bp['boxes']):
+        group_index = i % 6
+        box.set_facecolor(algorithm_colors[group_index])
 
     # Add vertical lines to separate groups
-    for i in range(1, num_groups):
-        plt.axvline(x=3 * i + 0.5, color='gray', linestyle='--', linewidth=1)
+    for i in range(1, num_groups + 1):
+        plt.axvline(x=6 * i + 0.5, color='gray', linestyle='--', linewidth=1)
 
     box = ax1.get_position()
     ax1.set_position([box.x0, box.y0 + box.height * 0.1,
                       box.width, box.height * 0.9])
     if legendInside:
-        ax1.legend([bp["boxes"][0], bp["boxes"][1], bp["boxes"][2]],
-                   ["XDA", "XDA SHAP", "XDA FI"])
+        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
+                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA3"])
     else:
-        ax1.legend([bp["boxes"][0], bp["boxes"][1], bp["boxes"][2]],
-                   ["XDA", "XDA SHAP", "XDA FI"],
+        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
+                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA3"],
                    ncol=2, loc='upper center', bbox_to_anchor=(0.5, -0.1))
 
     plt.title(name)
-
-    ax1.get_xaxis().tick_bottom()
-    ax1.get_yaxis().tick_left()
 
     if path is not None:
         plt.savefig(path + name)
@@ -171,8 +189,82 @@ def personalizedBoxPlotCustom(data, name, columnNames=None, percentage=False, pa
         plt.clf()
 
 
-def personalizedBarChart(data, name, path=None, show=False, percentage=False):
-    colors = plt.cm.Spectral(np.linspace(0, 1, 5))
+def personalizedBoxPlotCustom_5datasets(data, name, nReq, columnNames=None, percentage=False, path=None, show=False,
+                                        seconds=False,
+                                        legendInside=False):
+    fig = plt.figure(figsize=(20, 10))  # 1500x800
+
+    ax1 = fig.add_subplot(111)
+    bp = ax1.boxplot(data, patch_artist=True, notch=True, vert=True)
+
+    # Colori per 5 dataset
+    algorithm_colors = [
+        '#FF5733',  # Arancione acceso
+        '#6B8E23',  # Verde oliva
+        '#4169E1',  # Blu reale
+        '#FF00FF',  # Magenta
+        '#FFD700',  # Oro
+    ]
+
+    for whisker in bp['whiskers']:
+        whisker.set(color='#8B008B', linewidth=1.5, linestyle=":")
+
+    for cap in bp['caps']:
+        cap.set(color='#8B008B', linewidth=2)
+
+    for median in bp['medians']:
+        median.set(color='black', linewidth=3)
+
+    for flier in bp['fliers']:
+        flier.set(marker='D', color='#e7298a', alpha=0.5)
+
+    if percentage:
+        ax1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0, decimals=0))
+
+        if (data.max().max() - data.min().min()) / 8 < 0.01:
+            ax1.yaxis.set_major_locator(ticker.MultipleLocator(0.01))
+
+    if seconds:
+        def y_fmt(x, y):
+            return str(int(x)) + ' s'
+
+        ax1.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
+
+    num_groups = nReq
+
+
+    for i, box in enumerate(bp['boxes']):
+        group_index = i % 5
+        box.set_facecolor(algorithm_colors[group_index])
+
+    for i in range(1, num_groups + 1):
+        plt.axvline(x=5 * i + 0.5, color='gray', linestyle='--', linewidth=1)
+
+    box = ax1.get_position()
+    ax1.set_position([box.x0, box.y0 + box.height * 0.1,
+                      box.width, box.height * 0.9])
+
+    if legendInside:
+        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
+                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random"])
+    else:
+        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
+                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random"],
+                   ncol=2, loc='upper center', bbox_to_anchor=(0.5, -0.1))
+
+    plt.title(name)
+
+    if path is not None:
+        plt.savefig(path + name)
+
+    if show:
+        plt.show()
+    else:
+        plt.clf()
+
+
+def personalizedBarChart(data, name, nReq, path=None, show=False, percentage=False):
+    colors = plt.cm.Spectral(np.linspace(0, 1, 6))
 
     ax = data.plot.bar(title=name, color=colors, figsize=(15, 8))
 
@@ -208,17 +300,9 @@ def personalizedBarChart(data, name, path=None, show=False, percentage=False):
 os.chdir(sys.path[0])
 evaluate = False
 
-pathToResults = "../results/"
+pathToResults = "../results/rescueRobotAllv3/"
 
-featureNames = ["cruise speed",
-                    "image resolution",
-                    "illuminance",
-                    "controls responsiveness",
-                    "power",
-                    "smoke intensity",
-                    "obstacle size",
-                    "obstacle distance",
-                    "firm obstacle"]
+featureNames = ['cruise speed','image resolution','illuminance','controls responsiveness','power','smoke intensity','obstacle size','obstacle distance','firm obstacle']
 
 reqs = ["req_0", "req_1", "req_2", "req_3"]
 reqsNamesInGraphs = ["R1", "R2", "R3", "R4"]
@@ -227,6 +311,10 @@ reqsNamesInGraphs = ["R1", "R2", "R3", "R4"]
 results = readFromCsv(pathToResults + 'results.csv')
 resultsSHAP = readFromCsv(pathToResults + 'resultsSHAP.csv')
 resultsFI = readFromCsv(pathToResults + 'resultsFI.csv')
+resultsFitest = readFromCsv(pathToResults + 'resultsFitest.csv')
+resultsRandom = readFromCsv(pathToResults + 'resultsRandom.csv')
+resultsNSGA = readFromCsv(pathToResults + 'resultsNSGA.csv')
+resultMemory = pd.read_csv(pathToResults + 'memory_results.csv')
 nReqs = len(results["custom_confidence"][0])
 reqs = reqs[:nReqs]
 reqsNamesInGraphs = reqsNamesInGraphs[:nReqs]
@@ -239,17 +327,23 @@ if evaluate:
 customOutcomes = pd.read_csv(pathToResults + 'customDataset.csv')
 SHAPOutcomes = pd.read_csv(pathToResults + 'SHAPDataset.csv')
 FIOutcomes = pd.read_csv(pathToResults + 'FIDataset.csv')
-#nsga3Outcomes = pd.read_csv(pathToResults + 'nsga3Dataset.csv')
+FitestOutcomes = pd.read_csv(pathToResults + 'FitestDataset.csv')
+nsga3Outcomes = pd.read_csv(pathToResults + 'NSGADataset.csv')
+RandomOutcomes = pd.read_csv(pathToResults + 'RandomDataset.csv')
 
 # build indices arrays
-#nsga3ConfidenceNames = ['nsga3_confidence_' + req for req in reqs]
-#nsga3OutcomeNames = ['nsga3_outcome_' + req for req in reqs]
+nsga3ConfidenceNames = ['custom_confidence_' + req for req in reqs]
+nsga3OutcomeNames = ['custom_outcome_' + req for req in reqs]
 customConfidenceNames = ['custom_confidence_' + req for req in reqs]
 customOutcomeNames = ['custom_outcome_' + req for req in reqs]
 SHAPcustomConfidenceNames = ['custom_confidence_' + req for req in reqs]
 SHAPcustomOutcomeNames = ['custom_outcome_' + req for req in reqs]
 FIcustomConfidenceNames = ['custom_confidence_' + req for req in reqs]
 FIcustomOutcomeNames = ['custom_outcome_' + req for req in reqs]
+FitestcustomConfidenceNames = ['custom_confidence_' + req for req in reqs]
+FitestcustomOutcomeNames = ['custom_outcome_' + req for req in reqs]
+RandomcustomOutcomesNames = ['custom_outcome_' + req for req in reqs]
+RandomcustomConfidenceNames = ['custom_confidence_' + req for req in reqs]
 
 #outcomes dataframe
 outcomes = pd.concat([customOutcomes[reqs]], axis=1)
@@ -261,7 +355,15 @@ outcomesSHAP = outcomesSHAP[list(sum(zip(SHAPcustomOutcomeNames), ()))]
 outcomesFI = FIOutcomes[reqs]
 outcomesFI.columns = np.array(FIcustomOutcomeNames)
 outcomesFI = outcomesFI[list(sum(zip(FIcustomOutcomeNames), ()))]
-
+outcomesFitest = FitestOutcomes[reqs]
+outcomesFitest.columns = np.array(FitestcustomOutcomeNames)
+outcomesFitest = outcomesFitest[list(sum(zip(FitestcustomOutcomeNames), ()))]
+outcomesRandom = RandomOutcomes[reqs]
+outcomesRandom.columns = np.array(RandomcustomOutcomesNames)
+outcomesRandom = outcomesRandom[list(sum(zip(RandomcustomOutcomesNames), ()))]
+outcomesNSGA = nsga3Outcomes[reqs]
+outcomesNSGA.columns = np.array(nsga3OutcomeNames)
+outcomesNSGA = outcomesNSGA[list(sum(zip(nsga3OutcomeNames), ()))]
 # decompose arrays columns into single values columns
 #nsga3Confidences = pd.DataFrame(results['nsga3_confidence'].to_list(),
 #                               columns=nsga3ConfidenceNames)
@@ -271,33 +373,61 @@ customConfidencesSHAP = pd.DataFrame(resultsSHAP['custom_confidence'].to_list(),
                                      columns=SHAPcustomConfidenceNames)
 customConfidencesFI = pd.DataFrame(resultsFI['custom_confidence'].to_list(),
                                    columns=FIcustomConfidenceNames)
+customConfidencesFitest = pd.DataFrame(resultsFitest['custom_confidence'].to_list(),
+                                       columns=FitestcustomConfidenceNames)
+customConfidencesRandom = pd.DataFrame(resultsRandom['custom_confidence'].to_list(),
+                                       columns=RandomcustomConfidenceNames)
+NSGAConfidences = pd.DataFrame(resultsNSGA['custom_confidence'].to_list(),
+                               columns=nsga3ConfidenceNames)
 
 # select sub-dataframes to plot
 confidences = customConfidences
 confidences = confidences[list(sum(zip(customConfidences.columns), ()))]
 confidences_concat = pd.concat(
-    [customConfidences, customConfidencesSHAP, customConfidencesFI], axis=1)
-#confidences_concat = confidences_concat[list(sum(zip(nsga3Confidences.columns, customConfidences.columns, customConfidencesSHAP.columns, customConfidencesPCA.columns, customConfidencesFI.columns), ()))]
+    [customConfidences, customConfidencesSHAP, customConfidencesFI, customConfidencesFitest, customConfidencesRandom,
+     NSGAConfidences], axis=1)
+
+num_columns = confidences_concat.shape[1]
+order = []
+for i in range(len(reqs)):
+    order += list(range(i, num_columns, len(reqs)))
+
+confidences_reordered = confidences_concat.iloc[:, order]
+
 scores = pd.concat([results["custom_score"], resultsSHAP["custom_score"],
-                    resultsFI["custom_score"]], axis=1)
+                    resultsFI["custom_score"], resultsFitest["custom_score"], resultsRandom["custom_score"],
+                    resultsNSGA["custom_score"]], axis=1)
 times = pd.concat([results["custom_time"],
                    resultsSHAP["custom_time"],
-                   resultsFI["custom_time"]], axis=1)
+                   resultsFI["custom_time"], resultsFitest["custom_time"], resultsRandom["custom_time"],
+                   resultsNSGA["custom_time"]], axis=1)
 confidencesSHAP = pd.concat([customConfidencesSHAP], axis=1)
 confidencesSHAP = confidencesSHAP[list(sum(zip(customConfidencesSHAP.columns), ()))]
 scoresSHAP = resultsSHAP[["custom_score"]]
 timesSHAP = resultsSHAP[["custom_time"]]
 confidencesFI = pd.concat([customConfidencesFI], axis=1)
 confidencesFI = confidencesFI[list(sum(zip(customConfidencesFI.columns), ()))]
-scoresFI = resultsSHAP[["custom_score"]]
-timesFI = resultsSHAP[["custom_time"]]
+scoresFI = resultsFI[["custom_score"]]
+timesFI = resultsFI[["custom_time"]]
+confidencesFitest = pd.concat([customConfidencesFitest], axis=1)
+confidencesFitest = confidencesFitest[list(sum(zip(customConfidencesFitest.columns), ()))]
+scoresFitest = resultsFitest[["custom_score"]]
+timesFitest = resultsFitest[["custom_time"]]
+confidencesRandom = pd.concat([customConfidencesRandom], axis=1)
+confidencesRandom = confidencesRandom[list(sum(zip(customConfidencesRandom.columns), ()))]
+scoresRandom = resultsRandom[["custom_score"]]
+timesRandom = resultsRandom[["custom_time"]]
+confidencesNSGA = pd.concat([NSGAConfidences], axis=1)
+confidencesNSGA = confidencesNSGA[list(sum(zip(NSGAConfidences.columns), ()))]
+scoresNSGA = resultsNSGA[["custom_score"]]
+timesNSGA = resultsNSGA[["custom_time"]]
 
 # plots
 plotPath = pathToResults + 'plots/'
 if not os.path.exists(plotPath):
     os.makedirs(plotPath)
 
-personalizedBoxPlotCustom(confidences_concat, "Confidences comparison", reqsNamesInGraphs, path=plotPath,
+personalizedBoxPlotCustom(confidences_reordered, "Confidences comparison", nReqs, reqsNamesInGraphs, path=plotPath,
                           percentage=False)
 personalizedBoxPlot(scores, "Score comparison", path=plotPath)
 personalizedBoxPlot(times, "Execution time comparison", path=plotPath, seconds=True, legendInside=True)
@@ -307,11 +437,16 @@ personalizedBoxPlot(times, "Execution time comparison", path=plotPath, seconds=T
 customPredictedSuccessful = (confidences[customConfidenceNames] > targetConfidence).all(axis=1)
 customPredictedSuccessfulSHAP = (confidencesSHAP[SHAPcustomConfidenceNames] > targetConfidence).all(axis=1)
 customPredictedSuccessfulFI = (confidencesFI[FIcustomConfidenceNames] > targetConfidence).all(axis=1)
+customPredictedSuccessfulFitest = (confidencesFitest[FitestcustomConfidenceNames] > targetConfidence).all(axis=1)
+customPredictedSuccessfulRandom = (confidencesRandom[RandomcustomConfidenceNames] > targetConfidence).all(axis=1)
+nsga3PredictedSuccessful = (confidencesNSGA[nsga3ConfidenceNames] > targetConfidence).all(axis=1)
 predicted_successful_combined = pd.DataFrame({
-    #'nsga3PredictedSuccessful': nsga3PredictedSuccessful,
     'customPredictedSuccessful': customPredictedSuccessful,
     'customPredictedSuccessfulSHAP': customPredictedSuccessfulSHAP,
-    'customPredictedSuccessfulFI': customPredictedSuccessfulFI
+    'customPredictedSuccessfulFI': customPredictedSuccessfulFI,
+    'customPredictedSuccessfulFitest': customPredictedSuccessfulFitest,
+    'customPredictedSuccessfulRandom': customPredictedSuccessfulRandom,
+    'nsga3PredictedSuccessful': nsga3PredictedSuccessful
 })
 
 #personalizedBoxPlot(confidences_concat[nsga3PredictedSuccessful], "Confidences comparison on NSGA-III predicted success", reqsNamesInGraphs, path=plotPath, percentage=False)
@@ -340,15 +475,19 @@ print(
     "XDA FI mean probas of predicted success: \n" + str(customConfidencesFI[customPredictedSuccessfulFI].mean()) + '\n')
 
 # predicted successful adaptations
-#nsga3Successful = outcomes[nsga3OutcomeNames].all(axis=1)
+nsga3Successful = outcomesNSGA[nsga3OutcomeNames].all(axis=1)
 customSuccessful = outcomes[customOutcomeNames].all(axis=1)
 customSuccessfulSHAP = outcomesSHAP[customOutcomeNames].all(axis=1)
 customSuccessfulFI = outcomesFI[customOutcomeNames].all(axis=1)
+customSuccessfulFitest = outcomesFitest[customOutcomeNames].all(axis=1)
+customSuccessfulRandom = outcomesRandom[customOutcomeNames].all(axis=1)
 
-#nsga3SuccessRate = nsga3Successful.mean()
+nsga3SuccessRate = nsga3Successful.mean()
 customSuccessRate = customSuccessful.mean()
 customSuccessRateSHAP = customSuccessfulSHAP.mean()
 customSuccessRateFI = customSuccessfulFI.mean()
+customSuccessRateFitest = customSuccessfulFitest.mean()
+customSuccessRateRandom = customSuccessfulRandom.mean()
 
 # outcomes analysis
 #print("NSGA-III success rate: " + "{:.2%}".format(nsga3SuccessRate))
@@ -363,21 +502,36 @@ print(str(outcomesFI[FIcustomOutcomeNames].mean()) + "\n")
 successRateIndividual = pd.concat(
     [outcomes[customOutcomeNames].rename(columns=dict(zip(customOutcomeNames, reqsNamesInGraphs))).mean(),
      outcomesSHAP[SHAPcustomOutcomeNames].rename(columns=dict(zip(SHAPcustomOutcomeNames, reqsNamesInGraphs))).mean(),
-     outcomesFI[customOutcomeNames].rename(columns=dict(zip(FIcustomOutcomeNames, reqsNamesInGraphs))).mean()],
+     outcomesFI[customOutcomeNames].rename(columns=dict(zip(FIcustomOutcomeNames, reqsNamesInGraphs))).mean(),
+     outcomesFitest[customOutcomeNames].rename(columns=dict(zip(FitestcustomOutcomeNames, reqsNamesInGraphs))).mean(),
+     outcomesRandom[customOutcomeNames].rename(columns=dict(zip(RandomcustomOutcomesNames, reqsNamesInGraphs))).mean(),
+     outcomesNSGA[customOutcomeNames].rename(columns=dict(zip(nsga3OutcomeNames, reqsNamesInGraphs))).mean()],
     axis=1)
-successRateIndividual.columns = ['XDA', 'XDA SHAP', 'XDA FI']
-personalizedBarChart(successRateIndividual, "Success Rate Individual Reqs", plotPath)
+successRateIndividual.columns = ['XDA', 'XDA SHAP', 'XDA FI', 'Fitest', 'Random', 'NSGA3']
+personalizedBarChart(successRateIndividual, "Success Rate Individual Reqs", nReqs, plotPath)
 
 successRate = pd.DataFrame(
-    [[customSuccessRate, customSuccessRateSHAP, customSuccessRateFI]],
-    columns=["XDA", "XDA SHAP", "XDA FI"])
-personalizedBarChart(successRate, "Success Rate", plotPath)
+    [[customSuccessRate, customSuccessRateSHAP, customSuccessRateFI, customSuccessRateFitest, customSuccessRateRandom,
+      nsga3SuccessRate]],
+    columns=["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA3"])
+personalizedBarChart(successRate, "Success Rate", nReqs, plotPath)
 
 successRateOfPredictedSuccess = pd.DataFrame([[outcomes[customOutcomeNames][customPredictedSuccessful].all(
     axis=1).mean(),
                                                outcomesSHAP[SHAPcustomOutcomeNames][customPredictedSuccessfulSHAP].all(
                                                    axis=1).mean(),
                                                outcomesFI[FIcustomOutcomeNames][customPredictedSuccessfulFI].all(
-                                                   axis=1).mean()]],
-                                             columns=["XDA", "XDA SHAP", "XDA FI"])
-personalizedBarChart(successRateOfPredictedSuccess, "Success Rate of Predicted Success", plotPath)
+                                                   axis=1).mean(),
+                                               outcomesFitest[FitestcustomOutcomeNames][
+                                                   customPredictedSuccessfulFitest].all(
+                                                   axis=1).mean(),
+                                               outcomesRandom[RandomcustomOutcomesNames][
+                                                   customPredictedSuccessfulRandom].all(
+                                                   axis=1).mean(),
+                                               outcomesNSGA[nsga3OutcomeNames][nsga3PredictedSuccessful].all(
+                                                   axis=1).mean()
+                                               ]],
+                                             columns=["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA3"])
+personalizedBarChart(successRateOfPredictedSuccess, "Success Rate of Predicted Success", nReqs, plotPath)
+
+memoryPlot(resultMemory, plotPath)
