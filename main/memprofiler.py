@@ -1,3 +1,4 @@
+import tracemalloc
 import warnings
 import numpy as np
 import pandas as pd
@@ -16,9 +17,12 @@ from util import vecPredictProba
 
 
 def profile_memory(func, *args, **kwargs):
-    mem_usage = memory_usage((func, args, kwargs), interval=0.1, max_iterations=1)
-    return max(mem_usage)
-
+    tracemalloc.start()
+    func(*args, **kwargs)
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    print(peak / (1024 ** 2))
+    return peak / (1024 ** 2)
 
 def successScore(adaptation, reqClassifiers, targetSuccessProba):
     return np.sum(vecPredictProba(reqClassifiers, [adaptation])[0] - targetSuccessProba)
@@ -31,19 +35,18 @@ def optimizationScore(adaptation):
 def main():
     warnings.filterwarnings("ignore")
 
-    ds = pd.read_csv('../datasets/uav.csv')
-    featureNames = ["formation", "flying_speed", "countermeasure", "weather", "day_time", "threat_range", "#threats", ]
-    controllableFeaturesNames = featureNames[0:3]
-    externalFeaturesNames = featureNames[3:7]
-    controllableFeatureIndices = [0, 1, 2]
+    ds = pd.read_csv('../datasets/dataset5000.csv')
+    featureNames = ['cruise speed','image resolution','illuminance','controls responsiveness','power','smoke intensity','obstacle size','obstacle distance','firm obstacle']
+    controllableFeaturesNames = featureNames[0:4]
+    externalFeaturesNames = featureNames[4:9]
+    controllableFeatureIndices = [0, 1, 2, 3]
 
     # for simplicity, we consider all the ideal points to be 0 or 100
     # so that we just need to consider ideal directions instead
     # -1 => minimize, 1 => maximize
-    optimizationDirections = [1, 1, -1]
+    optimizationDirections = [1, -1, -1, -1]
 
-    reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5", "req_6", "req_7", "req_8", "req_9", "req_10",
-            "req_11"]
+    reqs = ["req_0", "req_1", "req_2", "req_3"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
@@ -76,10 +79,9 @@ def main():
                                      np.ravel(y_test.loc[:, req])))
         print("=" * 100)
 
-    controllableFeatureDomains = np.array([[0, 1], [5.0, 50.0], [0, 1]])
-    discreteIndices = [0, 2]
+    controllableFeatureDomains = np.repeat([[0, 100]], n_controllableFeatures, axis=0)
+    discreteIndices = []
 
-    # Planner instantiation
     customPlanner = CustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
                                   controllableFeaturesNames, controllableFeatureIndices, controllableFeatureDomains,
                                   optimizationDirections, optimizationScore, 1, "../explainability_plots")
@@ -100,8 +102,8 @@ def main():
 
     Fitest_planner = FitestPlanner(models, targetConfidence,
                                    controllableFeatureIndices, controllableFeatureDomains, optimizationScore,
-                                   successScore, pop_size, discreteIndices, 12,
-                                   [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8])
+                                   successScore, pop_size, discreteIndices, 4,
+                                   [0.8, 0.8, 0.8, 0.8])
 
     Random_Planner = RandomPlanner(controllableFeatureIndices, controllableFeatureDomains, discreteIndices, models,
                                    optimizationScore)
@@ -112,7 +114,7 @@ def main():
         'SHAPTime': [SHAPcustomPlanner.rankingTime],
         'FITime': [FIcustomPlanner.rankingTime]
     }
-    # Data dictionary to hold profiling results
+
     data_memory = {
         'CustomMemory': [],
         'SHAPMemory': [],
@@ -131,7 +133,7 @@ def main():
         print("Row " + str(rowIndex) + ":\n" + str(row))
         print("-" * 100)
 
-        # Memory profiling
+
         customMemUsage = profile_memory(customPlanner.findAdaptation, row)
         SHAPcustomMemUsage = profile_memory(SHAPcustomPlanner.findAdaptation, row)
         FICustomMemUsage = profile_memory(FIcustomPlanner.findAdaptation, row)
@@ -140,7 +142,7 @@ def main():
         externalFeatures = row[n_controllableFeatures:]
         nsga3MemUsage = profile_memory(nsga3Planner.findAdaptation, externalFeatures)
 
-        # Append memory and time data
+
         data_memory['CustomMemory'].append(customMemUsage)
         data_memory['SHAPMemory'].append(SHAPcustomMemUsage)
         data_memory['FIMemory'].append(FICustomMemUsage)
@@ -150,18 +152,17 @@ def main():
 
         print("-" * 100)
 
-    # Crea un DataFrame dai dati
+
     df_memory = pd.DataFrame(data_memory)
     df_time = pd.DataFrame(data_time)
 
     path = "../results/"
 
-    # Salva il DataFrame in un file CSV (opzionale)
+
     df_memory.to_csv(path + "/memory_results.csv", index=False)
     df_time.to_csv(path + "/time_results.csv", index=False)
-    # Visualizza il DataFrame
-    print(df_memory)
-    print(df_time)
+   #print(df_memory)
+   #print(df_time)
 
 
 if __name__ == '__main__':
