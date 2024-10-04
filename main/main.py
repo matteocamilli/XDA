@@ -28,7 +28,15 @@ def successScore(adaptation, reqClassifiers, targetSuccessProba):
 
 # provided optimization score function (based on the ideal controllable feature assignment)
 def optimizationScore(adaptation):
-    return 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3])
+    #return 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3]) #robot
+    #return 52 - (1 - adaptation[0] + 50 - adaptation[1] + adaptation[2]) #uav
+    #return 50 - (50 - adaptation[0]) #drive
+    return 800 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3] +
+     + 100 - adaptation[4] + adaptation[5] + adaptation[6] + 100 - adaptation[7]) #robotDouble
+    #return 40079 - (1 - adaptation[0] + 50 - adaptation[1] + adaptation[2] + 4 - adaptation[3] +
+    # + 23 - adaptation[4] + 40000 - adaptation[5]) #uavDouble
+    #return 60 - (50 - adaptation[0] + adaptation[1]) #driveDouble
+
 
 
 # ====================================================================================================== #
@@ -48,18 +56,18 @@ if __name__ == '__main__':
     # evaluate adaptations
     evaluate = True
 
-    ds = pd.read_csv('../datasets/uavv3.csv')
-    featureNames = ["formation","flying_speed","countermeasure","weather","day_time","threat_range","#threats",]
-    controllableFeaturesNames = featureNames[0:6]
-    externalFeaturesNames = featureNames[6:7]
-    controllableFeatureIndices = [0, 1, 2, 3, 4, 5]
+    ds = pd.read_csv('../datasets/dataset5000.csv')
+    featureNames = ['cruise speed','image resolution','illuminance','controls responsiveness','power','smoke intensity','obstacle size','obstacle distance','firm obstacle']
+    controllableFeaturesNames = featureNames[0:8]
+    externalFeaturesNames = featureNames[8:9]
+    controllableFeatureIndices = [0, 1, 2, 3, 4, 5, 6, 7]
 
     # for simplicity, we consider all the ideal points to be 0 or 100
     # so that we just need to consider ideal directions instead
     # -1 => minimize, 1 => maximize
-    optimizationDirections = [1, 1, -1, 1, 1, 1]
+    optimizationDirections = [1, -1, -1, -1, 1, -1, -1, 1]
 
-    reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5", "req_6", "req_7", "req_8", "req_9", "req_10", "req_11"]
+    reqs = ["req_0", "req_1", "req_2", "req_3"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
@@ -92,8 +100,8 @@ if __name__ == '__main__':
                                      np.ravel(y_test.loc[:, req])))
         print("=" * 100)
 
-    controllableFeatureDomains = np.array([[0, 1], [5.0, 50.0], [0, 1], [1, 4], [0,23], [1000.0, 40000.0]])
-    discreteIndices = [0, 2, 3, 4]
+    controllableFeatureDomains = np.repeat([[0, 100]], n_controllableFeatures, axis = 0)
+    discreteIndices = []
     # initialize planners
 
     customPlanner = CustomPlanner(X_train, n_neighbors, n_startingSolutions, models, targetConfidence,
