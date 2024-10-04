@@ -15,29 +15,32 @@ font = {'family': 'sans',
 
 matplotlib.rc('font', **font)
 
-def memoryPlot(data, path):
 
+def memoryPlot(data, path):
     dataMemory = {
-        'CustomMemory' : data['CustomMemory'],
-        'SHAPMemory' : data['SHAPMemory'],
-        'FIMemory' : data['FIMemory'],
-        'FitestMemory' : data['FitestMemory'],
-        'RandomMemory' : data['RandomMemory'],
-        'NSGA3Memory' : data['NSGA3Memory']
+        'CustomMemory': data['CustomMemory'],
+        'SHAPMemory': data['SHAPMemory'],
+        'FIMemory': data['FIMemory'],
+        'FitestMemory': data['FitestMemory'],
+        'RandomMemory': data['RandomMemory'],
+        #'NSGA3Memory': data['NSGA3Memory']
     }
 
-    plt.figure(figsize=(15,8))
-
+    plt.figure(figsize=(15, 8))
     for key in dataMemory:
         plt.plot(dataMemory[key], label=key)
 
     plt.xlabel('Test Number')
-    plt.ylabel('Memory Usage (MiB)')
-    plt.title('Memory Usage')
+    plt.ylabel('Memory Usage (MB)')
+    plt.title('Memory Usage Over Tests')
+    plt.yscale('log')
     plt.legend()
+    plt.legend(loc='upper left')
     plt.grid(True)
-
     plt.savefig(path + 'Memory.png')
+    plt.close()
+
+    personalizedBoxPlot(data, "Memory Box Plot", path=plotPath)
 
 
 def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=None, show=False, seconds=False,
@@ -96,10 +99,10 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
                       box.width, box.height * 0.9])
     if legendInside:
         ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
-                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA3"])
+                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random"])
     else:
         ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
-                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA3"],
+                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random"],
                    ncol=2, loc='upper center', bbox_to_anchor=(0.5, -0.1))
 
     plt.title(name)
@@ -232,7 +235,6 @@ def personalizedBoxPlotCustom_5datasets(data, name, nReq, columnNames=None, perc
 
     num_groups = nReq
 
-
     for i, box in enumerate(bp['boxes']):
         group_index = i % 5
         box.set_facecolor(algorithm_colors[group_index])
@@ -300,26 +302,30 @@ def personalizedBarChart(data, name, nReq, path=None, show=False, percentage=Fal
 os.chdir(sys.path[0])
 evaluate = False
 
-pathToResults = "../results/rescueRobotAllv3/"
+pathToResults = "../results/uavDouble/"
 
-featureNames = ['cruise speed','image resolution','illuminance','controls responsiveness','power','smoke intensity','obstacle size','obstacle distance','firm obstacle']
+featureNames = ['cruise speed', 'image resolution', 'illuminance', 'controls responsiveness', 'power',
+                    'smoke intensity', 'obstacle size', 'obstacle distance', 'firm obstacle']
 
-reqs = ["req_0", "req_1", "req_2", "req_3"]
-reqsNamesInGraphs = ["R1", "R2", "R3", "R4"]
+reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5","req_6", "req_7", "req_8", "req_9", "req_10", "req_11"]
+reqsNamesInGraphs = ["R1", "R2", "R3", "R4", "R%", "R6", "R7", "R8", "R9", "R10", "R11", "R12"]
 
 # read dataframe from csv
+
 results = readFromCsv(pathToResults + 'results.csv')
+"""
 resultsSHAP = readFromCsv(pathToResults + 'resultsSHAP.csv')
 resultsFI = readFromCsv(pathToResults + 'resultsFI.csv')
 resultsFitest = readFromCsv(pathToResults + 'resultsFitest.csv')
 resultsRandom = readFromCsv(pathToResults + 'resultsRandom.csv')
 resultsNSGA = readFromCsv(pathToResults + 'resultsNSGA.csv')
+"""
 resultMemory = pd.read_csv(pathToResults + 'memory_results.csv')
 nReqs = len(results["custom_confidence"][0])
 reqs = reqs[:nReqs]
 reqsNamesInGraphs = reqsNamesInGraphs[:nReqs]
 targetConfidence = np.full((1, nReqs), 0.8)[0]
-
+"""
 if evaluate:
     evaluateAdaptations(results, resultsSHAP, resultsFI, featureNames)
 
@@ -423,7 +429,9 @@ scoresNSGA = resultsNSGA[["custom_score"]]
 timesNSGA = resultsNSGA[["custom_time"]]
 
 # plots
+"""
 plotPath = pathToResults + 'plots/'
+"""
 if not os.path.exists(plotPath):
     os.makedirs(plotPath)
 
@@ -533,5 +541,5 @@ successRateOfPredictedSuccess = pd.DataFrame([[outcomes[customOutcomeNames][cust
                                                ]],
                                              columns=["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA3"])
 personalizedBarChart(successRateOfPredictedSuccess, "Success Rate of Predicted Success", nReqs, plotPath)
-
+"""
 memoryPlot(resultMemory, plotPath)
