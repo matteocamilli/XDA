@@ -29,52 +29,53 @@ class SHAPCustomPlanner(CustomPlanner):
 
         for i, reqClassifier in enumerate(self.reqClassifiers):
             feature_indices = shapClassifier(reqClassifier, X, controllableFeatureIndices)
+
             for j in range(len(feature_indices)):
                 cumulative_importance[j] += feature_indices[j]
 
         self.controllableFeatureIndices = np.argsort(cumulative_importance)[::-1]
+
         print(cumulative_importance)
         print(self.controllableFeatureIndices)
 
         endTime = time.time()
+        self.rankingTime = endTime - startTime
         print("SHAP classifier duration: " + str(endTime - startTime) + " s")
         print("=" * 100)
-
 
     def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures,
                           tempExcludedFeatures):
 
-        featureIndex = None
-        for i in self.controllableFeatureIndices[::-1]:
-            if i not in excludedFeatures and i not in tempExcludedFeatures:
-                featureIndex = i
+        featureIndices = [i for i in self.controllableFeatureIndices if
+                          i not in excludedFeatures and i not in tempExcludedFeatures]
 
-        # return if no feature can be modified
-        if featureIndex is None:
+        if not featureIndices:
             return None, None
 
-        # modify the selected feature
         newAdaptation = np.copy(adaptation)
-        newAdaptation[featureIndex] += self.optimizationDirections[featureIndex] * self.delta
 
-        featureMin = self.controllableFeatureDomains[featureIndex, 0]
-        featureMax = self.controllableFeatureDomains[featureIndex, 1]
+        for featureIndex in featureIndices:
+            newAdaptation[featureIndex] += self.optimizationDirections[featureIndex] * self.delta
 
-        if newAdaptation[featureIndex] < featureMin:
-            newAdaptation[featureIndex] = featureMin
-            excludedFeatures.append(featureIndex)
-        elif newAdaptation[featureIndex] > featureMax:
-            newAdaptation[featureIndex] = featureMax
-            excludedFeatures.append(featureIndex)
+            featureMin = self.controllableFeatureDomains[featureIndex, 0]
+            featureMax = self.controllableFeatureDomains[featureIndex, 1]
+
+            if newAdaptation[featureIndex] < featureMin:
+                newAdaptation[featureIndex] = featureMin
+                excludedFeatures.append(featureIndex)
+            elif newAdaptation[featureIndex] > featureMax:
+                newAdaptation[featureIndex] = featureMax
+                excludedFeatures.append(featureIndex)
+
         newConfidence = vecPredictProba(self.reqClassifiers, [newAdaptation])[0]
+
         if (isValidAdaptation and (newConfidence < self.targetConfidence).any()) \
                 or (not isValidAdaptation and (newConfidence < confidence).any()):
             newAdaptation = np.copy(adaptation)
             newConfidence = np.copy(confidence)
-            tempExcludedFeatures.append(featureIndex)
+            tempExcludedFeatures.extend(featureIndices)
         else:
             tempExcludedFeatures.clear()
-
 
         return newAdaptation, newConfidence
 
@@ -116,7 +117,6 @@ class SHAPCustomPlanner(CustomPlanner):
         # remove duplicate solutions
         adaptations = np.unique(adaptations, axis=0)
 
-
         for adaptation in adaptations:
             distances, neighborIndex = self.index.search(x=np.expand_dims(adaptation, axis=0), k=1)
             neighborIndex = neighborIndex[0][0]
@@ -125,7 +125,7 @@ class SHAPCustomPlanner(CustomPlanner):
             for i in self.controllableFeatureIndices:
                 maximals[i] = pdp.getMaximalsOfLine(self.summaryPdps[i], neighborIndex)
 
-            maxPossibilities = 3000
+            maxPossibilities = 1000
             n_possibilities = np.prod([len(m) for m in maximals])
             while n_possibilities > maxPossibilities:
                 i = np.argmax([len(m) for m in maximals])

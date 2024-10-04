@@ -30,6 +30,8 @@ class CustomPlanner:
         self.optimizationDirections = optimizationDirections
         self.optimizationScoreFunction = optimizationScoreFunction
         self.delta = delta
+        self.PDPtime = 0
+        self.SPDPtime = 0
 
         # train a k nearest neighbors classifier only used to find the neighbors of a sample in the dataset
         knn = KNeighborsClassifier()
@@ -53,6 +55,7 @@ class CustomPlanner:
 
         endTime = time.time()
         print("PDPs generation duration:             " + str(endTime - startTime) + " s")
+        self.PDPtime = endTime - startTime
         startTime = time.time()
 
         # make summary pdps
@@ -66,6 +69,7 @@ class CustomPlanner:
             self.summaryPdps.append(pdp.multiplyPdps(self.pdps[i], path + "/" + feature + ".png"))
 
         endTime = time.time()
+        self.SPDPtime = endTime - startTime
         print("SPDPs generation duration:            " + str(endTime - startTime) + " s")
         print("Total offline preprocessing duration: " + str(endTime - preprocessingStartTime) + " s\n" + "=" * 100)
 

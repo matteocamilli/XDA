@@ -7,6 +7,7 @@ import explainability_techniques.PDP as pdp
 from util import vecPredictProba, cartesian_product
 import faiss
 
+
 class FICustomPlanner(CustomPlanner):
 
     def __init__(self, X, Y, n_neighbors, n_startingSolutions, reqClassifiers, targetConfidence,
@@ -38,34 +39,33 @@ class FICustomPlanner(CustomPlanner):
         print(cumulative_importance)
         print(self.controllableFeatureIndices)
         endTime = time.time()
+        self.rankingTime = endTime - startTime
         print("FI classifier duration: " + str(endTime - startTime) + " s")
         print("=" * 100)
 
     def optimizeScoreStep(self, adaptation, confidence, isValidAdaptation, neighborIndex, excludedFeatures,
                           tempExcludedFeatures):
 
-        featureIndex = None
-        for i in self.controllableFeatureIndices[::-1]:
-            if i not in excludedFeatures and i not in tempExcludedFeatures:
-                featureIndex = i
+        featureIndices = [i for i in self.controllableFeatureIndices if
+                          i not in excludedFeatures and i not in tempExcludedFeatures]
 
-        # return if no feature can be modified
-        if featureIndex is None:
+        if not featureIndices:
             return None, None
 
-        # modify the selected feature
         newAdaptation = np.copy(adaptation)
-        newAdaptation[featureIndex] += self.optimizationDirections[featureIndex] * self.delta
 
-        featureMin = self.controllableFeatureDomains[featureIndex, 0]
-        featureMax = self.controllableFeatureDomains[featureIndex, 1]
+        for featureIndex in featureIndices:
+            newAdaptation[featureIndex] += self.optimizationDirections[featureIndex] * self.delta
 
-        if newAdaptation[featureIndex] < featureMin:
-            newAdaptation[featureIndex] = featureMin
-            excludedFeatures.append(featureIndex)
-        elif newAdaptation[featureIndex] > featureMax:
-            newAdaptation[featureIndex] = featureMax
-            excludedFeatures.append(featureIndex)
+            featureMin = self.controllableFeatureDomains[featureIndex, 0]
+            featureMax = self.controllableFeatureDomains[featureIndex, 1]
+
+            if newAdaptation[featureIndex] < featureMin:
+                newAdaptation[featureIndex] = featureMin
+                excludedFeatures.append(featureIndex)
+            elif newAdaptation[featureIndex] > featureMax:
+                newAdaptation[featureIndex] = featureMax
+                excludedFeatures.append(featureIndex)
 
         newConfidence = vecPredictProba(self.reqClassifiers, [newAdaptation])[0]
 
@@ -73,7 +73,7 @@ class FICustomPlanner(CustomPlanner):
                 or (not isValidAdaptation and (newConfidence < confidence).any()):
             newAdaptation = np.copy(adaptation)
             newConfidence = np.copy(confidence)
-            tempExcludedFeatures.append(featureIndex)
+            tempExcludedFeatures.extend(featureIndices)
         else:
             tempExcludedFeatures.clear()
 
@@ -114,7 +114,6 @@ class FICustomPlanner(CustomPlanner):
                     adaptations.append(newAdaptation)
                     excludedFeatures.append(controllableIndex)
 
-
         # remove duplicate solutions
         adaptations = np.unique(adaptations, axis=0)
 
@@ -126,8 +125,9 @@ class FICustomPlanner(CustomPlanner):
             for i in self.controllableFeatureIndices:
                 maximals[i] = pdp.getMaximalsOfLine(self.summaryPdps[i], neighborIndex)
 
-            maxPossibilities = 3000
+            maxPossibilities = 1000
             n_possibilities = np.prod([len(m) for m in maximals])
+
             while n_possibilities > maxPossibilities:
                 i = np.argmax([len(m) for m in maximals])
                 maximals[i] = maximals[i][1::2]
