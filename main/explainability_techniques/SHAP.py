@@ -30,9 +30,6 @@ def shapClassifier(model, X_train, controllableFeatures):
     elif isinstance(model, XGBClassifier):
         explainer = shap.TreeExplainer(model)
 
-    else:
-        print("Il tipo del modello non è riconosciuto.")
-
     shap_values = explainer.shap_values(X_train)
 
     mean_shap_values = np.mean(np.abs(shap_values), axis=0)
