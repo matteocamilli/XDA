@@ -14,6 +14,8 @@ class NSGA3Planner:
         self.targetConfidence = targetConfidence
         self.successScoreFunction = successScoreFunction
         self.optimizationScoreFunction = optimizationScoreFunction
+        self.controllableFeaturesDomains = controllableFeatureDomains
+        self.n_controllableFeatures = len(controllableFeatureIndices)
 
         # create the reference directions to be used for the optimization
         ref_dirs = get_reference_directions("das-dennis", len(controllableFeatureIndices), n_partitions=12)

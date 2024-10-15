@@ -21,6 +21,7 @@ class FitestPlanner:
         self.no_of_Objectives = no_of_Objectives
         self.threshold_criteria = threshold_criteria
         self.objective_uncovered = list(range(no_of_Objectives))
+        self.n_controllableFeatures = len(controllableFeatureIndices)
 
     def environment_selection(self, objective_uncovered, R_T):
         to_return = []

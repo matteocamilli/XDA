@@ -11,6 +11,7 @@ class RandomPlanner:
         self.reqClassifiers = models
         self.optimizationScoreFunction = optimizationScoreFunction
         self.discreteIndices = discreteIndices
+        self.n_controllableFeatures = len(self.controllableIndices)
 
     def findAdaptation(self, row):
         bestAdaptation = row

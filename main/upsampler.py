@@ -12,11 +12,7 @@ y = df.iloc[:, 7:]
 over_sampler = RandomOverSampler()
 under_sampler = RandomUnderSampler()
 
-
-
-
 for col in y.columns:
-
     X_resampled_over, y_resampled_over = over_sampler.fit_resample(X, y[col])
 
     X_resampled, y_resampled = under_sampler.fit_resample(X_resampled_over, y_resampled_over)

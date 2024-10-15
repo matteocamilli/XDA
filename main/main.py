@@ -26,18 +26,26 @@ def successScore(adaptation, reqClassifiers, targetSuccessProba):
     return np.sum(vecPredictProba(reqClassifiers, [adaptation])[0] - targetSuccessProba)
 
 
+def normalizeAdaptation(adaptation):
+    new_adaptation = []
+    for index in range(n_controllableFeatures):
+        new_adaptation.append(((adaptation[index] - controllableFeatureDomains[index][0]) / (
+                    controllableFeatureDomains[index][1] - controllableFeatureDomains[index][0])) * 100)
+
+    return new_adaptation
+
+
 # provided optimization score function (based on the ideal controllable feature assignment)
 def optimizationScore(adaptation):
-    #return 400 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3]) #robot
-    #return 52 - (1 - adaptation[0] + 50 - adaptation[1] + adaptation[2]) #uav
-    #return 50 - (50 - adaptation[0]) #drive
-    return 800 - (100 - adaptation[0] + adaptation[1] + adaptation[2] + adaptation[3] +
-     + 100 - adaptation[4] + adaptation[5] + adaptation[6] + 100 - adaptation[7]) #robotDouble
-    #return 40079 - (1 - adaptation[0] + 50 - adaptation[1] + adaptation[2] + 4 - adaptation[3] +
-    # + 23 - adaptation[4] + 40000 - adaptation[5]) #uavDouble
-    #return 60 - (50 - adaptation[0] + adaptation[1]) #driveDouble
-
-
+    adaptation = normalizeAdaptation(adaptation)
+    tot = 100 * n_controllableFeatures
+    score = 0
+    for i in range(n_controllableFeatures):
+        if optimizationDirections[i] == 1:
+            score += 100 - adaptation[i]
+        else:
+            score += adaptation[i]
+    return tot - score
 
 # ====================================================================================================== #
 # IMPORTANT: everything named as custom in the code refers to the XDA approach                           #
@@ -56,18 +64,18 @@ if __name__ == '__main__':
     # evaluate adaptations
     evaluate = True
 
-    ds = pd.read_csv('../datasets/dataset5000.csv')
-    featureNames = ['cruise speed','image resolution','illuminance','controls responsiveness','power','smoke intensity','obstacle size','obstacle distance','firm obstacle']
-    controllableFeaturesNames = featureNames[0:8]
-    externalFeaturesNames = featureNames[8:9]
-    controllableFeatureIndices = [0, 1, 2, 3, 4, 5, 6, 7]
+    ds = pd.read_csv('../datasets/uavv2.csv')
+    featureNames = ['formation','flying_speed','countermeasure','weather','day_time','threat_range','#threats']
+    controllableFeaturesNames = featureNames[0:3]
+    externalFeaturesNames = featureNames[3:7]
+    controllableFeatureIndices = [0, 1, 2]
 
     # for simplicity, we consider all the ideal points to be 0 or 100
     # so that we just need to consider ideal directions instead
     # -1 => minimize, 1 => maximize
-    optimizationDirections = [1, -1, -1, -1, 1, -1, -1, 1]
+    optimizationDirections = [1, 1, -1]
 
-    reqs = ["req_0", "req_1", "req_2", "req_3"]
+    reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5", "req_6", "req_7", "req_8", "req_9", "req_10", "req_11"]
 
     n_reqs = len(reqs)
     n_neighbors = 10
@@ -100,7 +108,7 @@ if __name__ == '__main__':
                                      np.ravel(y_test.loc[:, req])))
         print("=" * 100)
 
-    controllableFeatureDomains = np.repeat([[0, 100]], n_controllableFeatures, axis = 0)
+    controllableFeatureDomains = np.array([[0, 1], [5.0, 50.0], [0, 1]])
     discreteIndices = []
     # initialize planners
 
@@ -126,7 +134,7 @@ if __name__ == '__main__':
                                   controllableFeatureIndices, controllableFeatureDomains, optimizationScore,
                                   successScore,
                                   pop_size,
-                                  discreteIndices, 4, [0.8, 0.8, 0.8, 0.8])
+                                  discreteIndices, 12, [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8])
 
     RandomPlanner = RandomPlanner(controllableFeatureIndices, controllableFeatureDomains, discreteIndices, models,
                                   optimizationScore)
@@ -197,7 +205,7 @@ if __name__ == '__main__':
 
             print("Best adaptation:                 " + str(customAdaptation[0:n_controllableFeatures]))
             print("Model confidence:                " + str(customConfidence))
-            print("Adaptation score:                " + str(customScore) + " / 400")
+            print("Adaptation score:                " + str(customScore) + " /" + str(100 * n_controllableFeatures))
         else:
             print("No adaptation found")
             customScore = None
@@ -217,7 +225,7 @@ if __name__ == '__main__':
 
             print("Best adaptation SHAP:                 " + str(SHAPcustomAdaptation[0:n_controllableFeatures]))
             print("Model confidence SHAP:                " + str(SHAPcustomConfidence))
-            print("Adaptation score SHAP:                " + str(SHAPcustomScore) + " / 400")
+            print("Adaptation score SHAP:                " + str(SHAPcustomScore) + " /" + str(100 * n_controllableFeatures))
         else:
             print("No adaptation found")
             SHAPcustomScore = None
@@ -237,7 +245,7 @@ if __name__ == '__main__':
 
             print("Best adaptation FI:                 " + str(FIcustomAdaptation[0:n_controllableFeatures]))
             print("Model confidence FI:                " + str(FIcustomConfidence))
-            print("Adaptation score FI:                " + str(FIcustomScore) + " / 400")
+            print("Adaptation score FI:                " + str(FIcustomScore) + " /" + str(100 * n_controllableFeatures))
         else:
             print("No adaptation found")
             FIcustomScore = None
@@ -257,7 +265,7 @@ if __name__ == '__main__':
 
             print("Best adaptation Fitest:                 " + str(FitestcustomAdaptation[0:n_controllableFeatures]))
             print("Model confidence Fitest:                " + str(FitestcustomConfidence))
-            print("Adaptation score Fitest:                " + str(FitestcustomScore) + " / 400")
+            print("Adaptation score Fitest:                " + str(FitestcustomScore) + " /" + str(100 * n_controllableFeatures))
         else:
             print("No adaptation found")
             FitestcustomScore = None
@@ -277,7 +285,7 @@ if __name__ == '__main__':
 
             print("Best adaptation Random:                 " + str(RandomCustomAdaptation[0:n_controllableFeatures]))
             print("Model confidence Random:                " + str(RandomCustomConfidence))
-            print("Adaptation score Random:                " + str(RandomCustomScore) + " / 400")
+            print("Adaptation score Random:                " + str(RandomCustomScore) + " /" + str(100 * n_controllableFeatures))
         else:
             print("No adaptation found")
             RandomCustomScore = None
@@ -294,7 +302,7 @@ if __name__ == '__main__':
 
         print("Best NSGA3 adaptation:           " + str(nsga3Adaptation[:n_controllableFeatures]))
         print("Model confidence:                " + str(nsga3Confidence))
-        print("Adaptation score:                " + str(nsga3Score) + " / 400")
+        print("Adaptation score:                " + str(nsga3Score) + " /" + str(100 * n_controllableFeatures))
         print("NSGA3 execution time:            " + str(nsga3Time) + " s")
 
         print("-" * 100)

@@ -23,7 +23,7 @@ def memoryPlot(data, path):
         'FIMemory': data['FIMemory'],
         'FitestMemory': data['FitestMemory'],
         'RandomMemory': data['RandomMemory'],
-        #'NSGA3Memory': data['NSGA3Memory']
+        'NSGA3Memory': data['NSGA3Memory']
     }
 
     plt.figure(figsize=(15, 8))
@@ -40,12 +40,12 @@ def memoryPlot(data, path):
     plt.savefig(path + 'Memory.png')
     plt.close()
 
-    personalizedBoxPlot(data, "Memory Box Plot", path=plotPath)
+    personalizedBoxPlotUnified(data, "Memory Box Plot", path=plotPath, log=True)
 
 
-def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=None, show=False, seconds=False,
-                        legendInside=False):
-    fig = plt.figure(figsize=(15, 8))
+def personalizedBoxPlotUnified(data, name, nReq=4, columnNames=None, percentage=False, path=None, show=False,
+                               seconds=False, legendInside=False, numAlgorithms=6, confidence=False, log=False):
+    fig = plt.figure(figsize=(20, 10))  # 1500x800 per avere più spazio per i grafici
 
     ax1 = fig.add_subplot(111)
     bp = ax1.boxplot(data, patch_artist=True, notch=True, vert=True)
@@ -56,11 +56,8 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
         '#4169E1',  # Blu reale
         '#FF00FF',  # Magenta
         '#FFD700',  # Oro
-        '#00CED1',  # Turchese scuro
+        '#00CED1',  # Turchese scuro (usato solo se ci sono 6 dataset)
     ]
-
-    for i, box in enumerate(bp['boxes']):
-        box.set_facecolor(algorithm_colors[i])
 
     for whisker in bp['whiskers']:
         whisker.set(color='#8B008B', linewidth=1.5, linestyle=":")
@@ -69,19 +66,13 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
         cap.set(color='#8B008B', linewidth=2)
 
     for median in bp['medians']:
-        median.set(color='red', linewidth=3)
+        median.set(color='black', linewidth=3)
 
     for flier in bp['fliers']:
         flier.set(marker='D', color='#e7298a', alpha=0.5)
 
-    if columnNames is not None and len(columnNames) > 1:
-        ax1.xaxis.set_ticks(np.arange(2, len(columnNames) * 6, step=6), columnNames)
-    else:
-        plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
-
     if percentage:
         ax1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0, decimals=0))
-
         if (data.max().max() - data.min().min()) / 8 < 0.01:
             ax1.yaxis.set_major_locator(ticker.MultipleLocator(0.01))
 
@@ -89,169 +80,35 @@ def personalizedBoxPlot(data, name, columnNames=None, percentage=False, path=Non
         def y_fmt(x, y):
             return str(int(x)) + ' s'
 
+        ax1.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
+
+    if log:
         ax1.set_yscale('log')
-        ax1.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
-
-    #ax1.set_yscale('log')
-
-    box = ax1.get_position()
-    ax1.set_position([box.x0, box.y0 + box.height * 0.1,
-                      box.width, box.height * 0.9])
-    if legendInside:
-        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
-                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random"])
-    else:
-        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
-                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random"],
-                   ncol=2, loc='upper center', bbox_to_anchor=(0.5, -0.1))
-
-    plt.title(name)
-
-    ax1.get_xaxis().tick_bottom()
-    ax1.get_yaxis().tick_left()
-
-    if path is not None:
-        plt.savefig(path + name)
-
-    if show:
-        fig.show()
-    else:
-        plt.clf()
-
-
-def personalizedBoxPlotCustom(data, name, nReq, columnNames=None, percentage=False, path=None, show=False,
-                              seconds=False,
-                              legendInside=False):
-    fig = plt.figure(figsize=(20, 10))  # 1500x800
-
-    ax1 = fig.add_subplot(111)
-    bp = ax1.boxplot(data, patch_artist=True, notch=True, vert=True)
-
-    algorithm_colors = [
-        '#FF5733',  # Arancione acceso
-        '#6B8E23',  # Verde oliva
-        '#4169E1',  # Blu reale
-        '#FF00FF',  # Magenta
-        '#FFD700',  # Oro
-        '#00CED1',  # Turchese scuro
-    ]
-
-    for whisker in bp['whiskers']:
-        whisker.set(color='#8B008B', linewidth=1.5, linestyle=":")
-
-    for cap in bp['caps']:
-        cap.set(color='#8B008B', linewidth=2)
-
-    for median in bp['medians']:
-        median.set(color='black', linewidth=3)
-
-    for flier in bp['fliers']:
-        flier.set(marker='D', color='#e7298a', alpha=0.5)
-
-    if percentage:
-        ax1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0, decimals=0))
-
-        if (data.max().max() - data.min().min()) / 8 < 0.01:
-            ax1.yaxis.set_major_locator(ticker.MultipleLocator(0.01))
-
-    if seconds:
-        def y_fmt(x, y):
-            return str(int(x)) + ' s'
-
-        ax1.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
-
-    num_groups = nReq
-
     for i, box in enumerate(bp['boxes']):
-        group_index = i % 6
+        group_index = i % numAlgorithms
         box.set_facecolor(algorithm_colors[group_index])
 
-    # Add vertical lines to separate groups
-    for i in range(1, num_groups + 1):
-        plt.axvline(x=6 * i + 0.5, color='gray', linestyle='--', linewidth=1)
+    if confidence:
+        for i in range(1, nReq + 1):
+            plt.axvline(x=numAlgorithms * i + 0.5, color='gray', linestyle='--', linewidth=1)
 
-    box = ax1.get_position()
-    ax1.set_position([box.x0, box.y0 + box.height * 0.1,
-                      box.width, box.height * 0.9])
-    if legendInside:
-        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
-                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA3"])
-    else:
-        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
-                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA3"],
-                   ncol=2, loc='upper center', bbox_to_anchor=(0.5, -0.1))
-
-    plt.title(name)
-
-    if path is not None:
-        plt.savefig(path + name)
-
-    if show:
-        plt.show()
-    else:
-        plt.clf()
-
-
-def personalizedBoxPlotCustom_5datasets(data, name, nReq, columnNames=None, percentage=False, path=None, show=False,
-                                        seconds=False,
-                                        legendInside=False):
-    fig = plt.figure(figsize=(20, 10))  # 1500x800
-
-    ax1 = fig.add_subplot(111)
-    bp = ax1.boxplot(data, patch_artist=True, notch=True, vert=True)
-
-    # Colori per 5 dataset
-    algorithm_colors = [
-        '#FF5733',  # Arancione acceso
-        '#6B8E23',  # Verde oliva
-        '#4169E1',  # Blu reale
-        '#FF00FF',  # Magenta
-        '#FFD700',  # Oro
-    ]
-
-    for whisker in bp['whiskers']:
-        whisker.set(color='#8B008B', linewidth=1.5, linestyle=":")
-
-    for cap in bp['caps']:
-        cap.set(color='#8B008B', linewidth=2)
-
-    for median in bp['medians']:
-        median.set(color='black', linewidth=3)
-
-    for flier in bp['fliers']:
-        flier.set(marker='D', color='#e7298a', alpha=0.5)
-
-    if percentage:
-        ax1.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0, decimals=0))
-
-        if (data.max().max() - data.min().min()) / 8 < 0.01:
-            ax1.yaxis.set_major_locator(ticker.MultipleLocator(0.01))
-
-    if seconds:
-        def y_fmt(x, y):
-            return str(int(x)) + ' s'
-
-        ax1.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
-
-    num_groups = nReq
-
-    for i, box in enumerate(bp['boxes']):
-        group_index = i % 5
-        box.set_facecolor(algorithm_colors[group_index])
-
-    for i in range(1, num_groups + 1):
-        plt.axvline(x=5 * i + 0.5, color='gray', linestyle='--', linewidth=1)
-
+    # Gestione delle posizioni della legenda
     box = ax1.get_position()
     ax1.set_position([box.x0, box.y0 + box.height * 0.1,
                       box.width, box.height * 0.9])
 
-    if legendInside:
-        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
-                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random"])
+    legend_labels = ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random"]
+    if numAlgorithms == 6:
+        legend_labels.append("NSGA-III")
     else:
-        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors],
-                   ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random"],
+        legend_labels.append("NSGA-III (data not available)")
+
+    if legendInside:
+        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors[:numAlgorithms]],
+                   legend_labels)
+    else:
+        ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors[:numAlgorithms]],
+                   legend_labels,
                    ncol=2, loc='upper center', bbox_to_anchor=(0.5, -0.1))
 
     plt.title(name)
@@ -302,30 +159,28 @@ def personalizedBarChart(data, name, nReq, path=None, show=False, percentage=Fal
 os.chdir(sys.path[0])
 evaluate = False
 
-pathToResults = "../results/uavDouble/"
+pathToResults = "../results/driveDoublev3/"
 
-featureNames = ['cruise speed', 'image resolution', 'illuminance', 'controls responsiveness', 'power',
-                    'smoke intensity', 'obstacle size', 'obstacle distance', 'firm obstacle']
+featureNames = ['car_speed','p_x','p_y','orientation','weather','road_shape']
 
-reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5","req_6", "req_7", "req_8", "req_9", "req_10", "req_11"]
-reqsNamesInGraphs = ["R1", "R2", "R3", "R4", "R%", "R6", "R7", "R8", "R9", "R10", "R11", "R12"]
+reqs = ["req_0", "req_1", "req_2"]
+reqsNamesInGraphs = ["R1", "R2", "R3"]
 
 # read dataframe from csv
 
 results = readFromCsv(pathToResults + 'results.csv')
-"""
+
 resultsSHAP = readFromCsv(pathToResults + 'resultsSHAP.csv')
 resultsFI = readFromCsv(pathToResults + 'resultsFI.csv')
 resultsFitest = readFromCsv(pathToResults + 'resultsFitest.csv')
 resultsRandom = readFromCsv(pathToResults + 'resultsRandom.csv')
 resultsNSGA = readFromCsv(pathToResults + 'resultsNSGA.csv')
-"""
 resultMemory = pd.read_csv(pathToResults + 'memory_results.csv')
 nReqs = len(results["custom_confidence"][0])
 reqs = reqs[:nReqs]
 reqsNamesInGraphs = reqsNamesInGraphs[:nReqs]
 targetConfidence = np.full((1, nReqs), 0.8)[0]
-"""
+
 if evaluate:
     evaluateAdaptations(results, resultsSHAP, resultsFI, featureNames)
 
@@ -429,16 +284,16 @@ scoresNSGA = resultsNSGA[["custom_score"]]
 timesNSGA = resultsNSGA[["custom_time"]]
 
 # plots
-"""
+
 plotPath = pathToResults + 'plots/'
-"""
+
 if not os.path.exists(plotPath):
     os.makedirs(plotPath)
 
-personalizedBoxPlotCustom(confidences_reordered, "Confidences comparison", nReqs, reqsNamesInGraphs, path=plotPath,
-                          percentage=False)
-personalizedBoxPlot(scores, "Score comparison", path=plotPath)
-personalizedBoxPlot(times, "Execution time comparison", path=plotPath, seconds=True, legendInside=True)
+personalizedBoxPlotUnified(confidences_reordered, "Confidences comparison", nReqs, reqsNamesInGraphs, path=plotPath,
+                          percentage=False, confidence=True)
+personalizedBoxPlotUnified(scores, "Score comparison", path=plotPath)
+personalizedBoxPlotUnified(times, "Execution time comparison", path=plotPath, seconds=True, legendInside=True, log=True)
 
 # predicted successful adaptations
 #nsga3PredictedSuccessful = (confidences[nsga3ConfidenceNames] > targetConfidence).all(axis=1)
@@ -541,5 +396,5 @@ successRateOfPredictedSuccess = pd.DataFrame([[outcomes[customOutcomeNames][cust
                                                ]],
                                              columns=["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA3"])
 personalizedBarChart(successRateOfPredictedSuccess, "Success Rate of Predicted Success", nReqs, plotPath)
-"""
+
 memoryPlot(resultMemory, plotPath)
