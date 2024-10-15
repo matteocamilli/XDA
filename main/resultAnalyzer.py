@@ -45,7 +45,7 @@ def memoryPlot(data, path):
 
 def personalizedBoxPlotUnified(data, name, nReq=4, columnNames=None, percentage=False, path=None, show=False,
                                seconds=False, legendInside=False, numAlgorithms=6, confidence=False, log=False):
-    fig = plt.figure(figsize=(20, 10))  # 1500x800 per avere più spazio per i grafici
+    fig = plt.figure(figsize=(20, 10))  # 1500x800 
 
     ax1 = fig.add_subplot(111)
     bp = ax1.boxplot(data, patch_artist=True, notch=True, vert=True)
@@ -92,7 +92,6 @@ def personalizedBoxPlotUnified(data, name, nReq=4, columnNames=None, percentage=
         for i in range(1, nReq + 1):
             plt.axvline(x=numAlgorithms * i + 0.5, color='gray', linestyle='--', linewidth=1)
 
-    # Gestione delle posizioni della legenda
     box = ax1.get_position()
     ax1.set_position([box.x0, box.y0 + box.height * 0.1,
                       box.width, box.height * 0.9])
