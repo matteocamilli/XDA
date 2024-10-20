@@ -24,7 +24,6 @@ class SHAPCustomPlanner(CustomPlanner):
         self.index.add(X)
 
         startTime = time.time()
-
         cumulative_importance = np.zeros(len(self.controllableFeatureIndices))
 
         for i, reqClassifier in enumerate(self.reqClassifiers):
