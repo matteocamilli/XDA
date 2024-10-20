@@ -1,6 +1,6 @@
+import csv
 import os
 import sys
-
 import matplotlib
 import numpy as np
 import pandas as pd
@@ -14,6 +14,70 @@ font = {'family': 'sans',
         'size': 12}
 
 matplotlib.rc('font', **font)
+
+
+def plotRankProfile(data, path, name='FI'):
+    df = pd.DataFrame(data)
+
+    model_counts = df['Model'].value_counts()
+    model_counts = model_counts[model_counts > 1]
+
+    for model in model_counts.index:
+        indices = df[df['Model'] == model].index
+        df.loc[indices, 'Model'] = [f"{model}_{i + 1}" for i in range(len(indices))]
+
+    plt.figure(figsize=(20, 15))
+    plt.plot(df['Model'], df['Memory Peak (MB)'], label='Peak Memory (MB)', marker='o')
+    plt.plot(df['Model'], df['Time'], label='Time (s)', marker='o')
+
+    plt.xlabel('Dataset')
+    plt.ylabel('Values')
+    if name == 'FI':
+        plt.title('FI Peak Memory Usage and Time by Dataset')
+    else:
+        plt.title('SHAP Peak Memory Usage and Time by Dataset')
+    plt.xticks(rotation=90)
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    if name == 'FI':
+        plt.savefig(path + 'FIMemoryTime.png')
+    else:
+        plt.savefig(path + 'SHAPMemoryTime.png')
+
+
+def PDPPlotMemory(data, path):
+    memory_df = pd.DataFrame(data)
+    plt.figure(figsize=(10, 6))
+    plt.plot(memory_df['Dataset'], memory_df['PDP_Peak_Memory_MB'], label='PDP Peak Memory (MB)', marker='o')
+    plt.plot(memory_df['Dataset'], memory_df['SPDP_Peak_Memory_MB'], label='SPDP Peak Memory (MB)', marker='o')
+
+    plt.xlabel('Dataset')
+    plt.ylabel('Peak Memory (MB)')
+    plt.title('PDP and SPDP Peak Memory Usage by Dataset')
+    plt.xticks(rotation=90)
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(path + 'PDPMemory.png')
+    #plt.show()
+
+
+def PDPPlotTime(data, path):
+    df = pd.DataFrame(data)
+    plt.figure(figsize=(10, 6))
+    plt.plot(df['Dataset'], df['PDPTime'], label='PDP Time', marker='o')
+    plt.plot(df['Dataset'], df['SPDPTime'], label='SPDP Time', marker='o')
+
+    plt.xlabel('Dataset')
+    plt.ylabel('Time (seconds)')
+    plt.title('PDP and SPDP Times by Dataset')
+    plt.xticks(rotation=90)
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig(path + 'PDPTime.png')
+    #plt.show()
 
 
 def memoryPlot(data, path):
@@ -45,7 +109,7 @@ def memoryPlot(data, path):
 
 def personalizedBoxPlotUnified(data, name, nReq=4, columnNames=None, percentage=False, path=None, show=False,
                                seconds=False, legendInside=False, numAlgorithms=6, confidence=False, log=False):
-    fig = plt.figure(figsize=(20, 10))  # 1500x800 
+    fig = plt.figure(figsize=(20, 10))  # 1500x800
 
     ax1 = fig.add_subplot(111)
     bp = ax1.boxplot(data, patch_artist=True, notch=True, vert=True)
@@ -144,7 +208,7 @@ def personalizedBarChart(data, name, nReq, path=None, show=False, percentage=Fal
             values = ['{:.2}'.format(v) for v in container.datavalues]
         ax.bar_label(container, values, fontsize=10)
 
-    ax.legend(loc='lower right')
+    ax.legend(loc='best')
 
     if path is not None:
         plt.savefig(path + name)
@@ -158,17 +222,21 @@ def personalizedBarChart(data, name, nReq, path=None, show=False, percentage=Fal
 os.chdir(sys.path[0])
 evaluate = False
 
-pathToResults = "../results/driveDoublev3/"
+pathToResults = ("../results/uavAllv3/")
 
-featureNames = ['car_speed','p_x','p_y','orientation','weather','road_shape']
+featureNames = ['formation', 'flying_speed', 'countermeasure', 'weather', 'day_time', 'threat_range', '#threats']
+#featureNames = ['cruise speed','image resolution','illuminance','controls responsiveness','power','smoke intensity','obstacle size','obstacle distance','firm obstacle']
+# featureNames = ['car_speed', 'p_x', 'p_y', 'orientation', 'weather', 'road_shape']
 
-reqs = ["req_0", "req_1", "req_2"]
-reqsNamesInGraphs = ["R1", "R2", "R3"]
+reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5", "req_6", "req_7", "req_8", "req_9", "req_10", "req_11"]
+reqsNamesInGraphs = ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12"]
 
 # read dataframe from csv
 
+resultsPdp = pd.read_csv('../results/profiling/memory_time_pdp.csv')
+profileFI = pd.read_csv('../results/profiling/FI_profile.csv')
+profileSHAP = pd.read_csv('../results/profiling/SHAP_profile.csv')
 results = readFromCsv(pathToResults + 'results.csv')
-
 resultsSHAP = readFromCsv(pathToResults + 'resultsSHAP.csv')
 resultsFI = readFromCsv(pathToResults + 'resultsFI.csv')
 resultsFitest = readFromCsv(pathToResults + 'resultsFitest.csv')
@@ -290,7 +358,7 @@ if not os.path.exists(plotPath):
     os.makedirs(plotPath)
 
 personalizedBoxPlotUnified(confidences_reordered, "Confidences comparison", nReqs, reqsNamesInGraphs, path=plotPath,
-                          percentage=False, confidence=True)
+                           percentage=False, confidence=True)
 personalizedBoxPlotUnified(scores, "Score comparison", path=plotPath)
 personalizedBoxPlotUnified(times, "Execution time comparison", path=plotPath, seconds=True, legendInside=True, log=True)
 
@@ -397,3 +465,7 @@ successRateOfPredictedSuccess = pd.DataFrame([[outcomes[customOutcomeNames][cust
 personalizedBarChart(successRateOfPredictedSuccess, "Success Rate of Predicted Success", nReqs, plotPath)
 
 memoryPlot(resultMemory, plotPath)
+PDPPlotTime(resultsPdp, '../results/')
+PDPPlotMemory(resultsPdp, '../results/')
+plotRankProfile(profileFI, '../results/')
+plotRankProfile(profileSHAP, '../results/', name='SHAP')
