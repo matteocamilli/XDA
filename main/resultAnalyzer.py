@@ -17,10 +17,10 @@ font = {'family': 'sans',
 matplotlib.rc('font', **font)
 
 
-def rankingPerf(df, path=None, legendInside=False, time=False, name ='FI'):
-
+def rankingPerf(df_fi, df_shap, path=None, legendInside=False, time=False):
     model_names = ['LogisticRegression', 'RandomForestClassifier', 'XGBClassifier',
                    'GradientBoostingClassifier', 'NeuralNetwork']
+
     if time:
         metric = 'Time'
         metric_label = "Time (s)"
@@ -30,14 +30,15 @@ def rankingPerf(df, path=None, legendInside=False, time=False, name ='FI'):
 
     boxplot_data = []
     for model in model_names:
-        boxplot_data.append(df[df['Model'] == model][metric].values)
+        boxplot_data.append(df_fi[df_fi['Model'] == model][metric].values)
+        boxplot_data.append(df_shap[df_shap['Model'] == model][metric].values)
 
     fig = plt.figure(figsize=(15, 8))
     ax1 = fig.add_subplot(111)
 
     bp = ax1.boxplot(boxplot_data, patch_artist=True, notch=True, vert=True)
 
-    colors = ['#FF5733', '#6B8E23', '#1E90FF', '#FFD700', '#FF69B4']
+    colors = ['#FF5733', '#6B8E23']
 
     for whisker in bp['whiskers']:
         whisker.set(color='#8B008B', linewidth=1.5, linestyle=":")
@@ -52,47 +53,35 @@ def rankingPerf(df, path=None, legendInside=False, time=False, name ='FI'):
         flier.set(marker='D', color='#e7298a', alpha=0.5)
 
     for i, box in enumerate(bp['boxes']):
-        box.set_facecolor(colors[i % len(colors)])
+        box.set_facecolor(colors[i % 2])
 
-    for i in range(1, len(model_names)):
+    for i in range(2, len(model_names) * 2, 2):
         ax1.axvline(x=i + 0.5, color='gray', linestyle='--', linewidth=1.5)
 
-    box = ax1.get_position()
-    ax1.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+    ax1.set_xticks([i + 1.5 for i in range(0, len(model_names) * 2, 2)])
+    ax1.set_xticklabels(model_names, rotation=45, ha="right")
 
-    legend_labels = model_names
     ax1.set_yscale('log')
 
-    ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in colors[:len(model_names)]],
-                legend_labels,
-                ncol=2, loc='best', bbox_to_anchor=(0.5, -0.1))
+    legend_labels = ['FI', 'SHAP']
+    ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in colors],
+               legend_labels, loc='best')
 
     if time:
-        if name == 'FI':
-            plt.title("Model Execution Time FI")
-        else:
-            plt.title("Model Execution Time SHAP")
+        plt.title("Model Execution Time for FI and SHAP")
     else:
-        if name == 'FI':
-            plt.title("Memory Peak (MB) FI")
-        else:
-            plt.title("Memory Peak (MB) SHAP")
+        plt.title("Memory Peak (MB) for FI and SHAP")
 
     plt.ylabel(metric_label)
+    plt.tight_layout()
 
     if path is not None:
         if time:
-            if name == 'FI':
-                plt.savefig(path + 'Model_Performance_Time_FI.png')
-            else:
-                plt.savefig(path + 'Model_Performance_Time_SHAP.png')
+            plt.savefig(path + 'time_ranking.png')
         else:
-            if name == 'FI':
-                plt.savefig(path + "Model_Performance_Memory_FI.png")
-            else:
-                plt.savefig(path + "Model_Performance_Memory_SHAP.png")
+            plt.savefig(path + "memory_ranking.png")
 
-    #plt.show()
+    plt.show()
 
 
 def pdp_plot(df, path, legendInside=False, time=False):
@@ -142,10 +131,8 @@ def pdp_plot(df, path, legendInside=False, time=False):
         group_index = i % 2
         box.set_facecolor(colors[group_index])
 
-    x_labels = []
-    for dataset in dataset_names:
-        x_labels.append(f'{dataset} PDP')
-        x_labels.append(f'{dataset} SPDP')
+    ax1.set_xticks([i + 1.5 for i in range(0, len(dataset_names) * 2, 2)])
+    ax1.set_xticklabels(dataset_names, rotation=45, ha="right")
 
     for i in range(1, len(dataset_names)):
         ax1.axvline(x=2 * i + 0.5, color='gray', linestyle='--', linewidth=1.5)
@@ -157,8 +144,8 @@ def pdp_plot(df, path, legendInside=False, time=False):
     plt.ylabel(metric)
 
     ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in colors[:2]],
-                legend_labels,
-                ncol=2, loc='best', bbox_to_anchor=(0.5, -0.1))
+               legend_labels,
+               ncol=2, loc='best', bbox_to_anchor=(0.5, -0.1))
 
     if time:
         plt.title("PDP and SPDP time execution")
@@ -204,7 +191,7 @@ def memoryPlot(data, path):
 def personalizedBoxPlotUnified(data, name, nReq=4, columnNames=None, percentage=False, path=None, show=False,
                                seconds=False, legendInside=False, numAlgorithms=6, confidence=False, log=False):
     fig = plt.figure(figsize=(20, 10))  # 1500x800
-
+    req_names = ["R" + str(j+1) for j in range(nReq)]
     ax1 = fig.add_subplot(111)
     bp = ax1.boxplot(data, patch_artist=True, notch=True, vert=True)
 
@@ -216,7 +203,7 @@ def personalizedBoxPlotUnified(data, name, nReq=4, columnNames=None, percentage=
         '#FFD700',  # Oro
         '#00CED1',  # Turchese scuro (usato solo se ci sono 6 dataset)
     ]
-
+    legend_labels = ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random", "NSGA-III"]
     for whisker in bp['whiskers']:
         whisker.set(color='#8B008B', linewidth=1.5, linestyle=":")
 
@@ -238,27 +225,22 @@ def personalizedBoxPlotUnified(data, name, nReq=4, columnNames=None, percentage=
         def y_fmt(x, y):
             return str(int(x)) + ' s'
 
-        ax1.yaxis.set_major_formatter(ticker.FuncFormatter(y_fmt))
-
     if log:
         ax1.set_yscale('log')
+        plt.setp(ax1.get_xticklabels(), visible=False)
     for i, box in enumerate(bp['boxes']):
         group_index = i % numAlgorithms
         box.set_facecolor(algorithm_colors[group_index])
 
     if confidence:
+        ax1.set_xticks([i + 2.5 for i in range(0, len(range(nReq)) * 6, 6)])
+        ax1.set_xticklabels(req_names, rotation=45, ha="right")
         for i in range(1, nReq + 1):
             plt.axvline(x=numAlgorithms * i + 0.5, color='gray', linestyle='--', linewidth=1)
 
     box = ax1.get_position()
     ax1.set_position([box.x0, box.y0 + box.height * 0.1,
                       box.width, box.height * 0.9])
-
-    legend_labels = ["XDA", "XDA SHAP", "XDA FI", "Fitest", "Random"]
-    if numAlgorithms == 6:
-        legend_labels.append("NSGA-III")
-    else:
-        legend_labels.append("NSGA-III (data not available)")
 
     if legendInside:
         ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in algorithm_colors[:numAlgorithms]],
@@ -316,14 +298,14 @@ def personalizedBarChart(data, name, nReq, path=None, show=False, percentage=Fal
 os.chdir(sys.path[0])
 evaluate = False
 
-pathToResults = ("../results/uavAllv3/")
+pathToResults = ("../results/robotDouble/")
 
-featureNames = ['formation', 'flying_speed', 'countermeasure', 'weather', 'day_time', 'threat_range', '#threats']
-#featureNames = ['cruise speed','image resolution','illuminance','controls responsiveness','power','smoke intensity','obstacle size','obstacle distance','firm obstacle']
-# featureNames = ['car_speed', 'p_x', 'p_y', 'orientation', 'weather', 'road_shape']
+#featureNames = ['formation', 'flying_speed', 'countermeasure', 'weather', 'day_time', 'threat_range', '#threats']
+featureNames = ['cruise speed','image resolution','illuminance','controls responsiveness','power','smoke intensity','obstacle size','obstacle distance','firm obstacle']
+#featureNames = ['car_speed', 'p_x', 'p_y', 'orientation', 'weather', 'road_shape']
 
-reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5", "req_6", "req_7", "req_8", "req_9", "req_10", "req_11"]
-reqsNamesInGraphs = ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "R12"]
+reqs = ["req_0", "req_1", "req_2", "req_3"]
+reqsNamesInGraphs = ["R1", "R2", "R3", "R4"]
 
 # read dataframe from csv
 
@@ -563,9 +545,7 @@ successRateOfPredictedSuccess = pd.DataFrame([[outcomes[customOutcomeNames][cust
 personalizedBarChart(successRateOfPredictedSuccess, "Success Rate of Predicted Success", nReqs, plotPath)
 
 memoryPlot(resultMemory, plotPath)
-pdp_plot(timePdp, '../results/', time=True)
-pdp_plot(memoryPdp, '../results/')
-rankingPerf(profileFI, '../results/', time=True)
-rankingPerf(profileFI, '../results/')
-rankingPerf(profileSHAP, '../results/', time=True, name="SHAP")
-rankingPerf(profileSHAP, '../results/', name="SHAP")
+pdp_plot(timePdp, '../results/profiling/', time=True)
+pdp_plot(memoryPdp, '../results/profiling/')
+rankingPerf(profileFI, profileSHAP, '../results/profiling/')
+rankingPerf(profileFI, profileSHAP, '../results/profiling/', time=True)
