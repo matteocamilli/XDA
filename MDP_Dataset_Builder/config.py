@@ -31,7 +31,7 @@ IDEAL_SPOTS = {
     }
 }
 
-#constraints = compute_constraints([.035, .04, .045, .055], IDEAL_SPOTS)
+#constraints = compute_constraints([.035, .04, .045, .055], IDEAL_SPOTS) #constraintsv1
 #constraints = compute_constraints([0.025, 0.03, 0.035, 0.045], IDEAL_SPOTS) #constraintsv2
 constraints = compute_constraints([0.02, 0.025, 0.03, 0.04], IDEAL_SPOTS) #constraintsv3
 
