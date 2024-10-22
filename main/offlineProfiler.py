@@ -1,5 +1,5 @@
 import time
-
+import explainability_techniques.PDP as pdp
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -15,19 +15,76 @@ import subprocess
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import MLPClassifier
 
+def collect_time():
+
+    pdps = {}
+    start_time_pdp = time.time()
+    for i, feature in enumerate(controllableFeaturesNames):
+        for j, reqClassifier in enumerate(models):
+            pdps[i] = []
+            pdps[i].append(pdp.partialDependencePlot(reqClassifier, X_train, [feature], "both"))
+    end_time_pdp = time.time()
+    pdp_execution_time = end_time_pdp - start_time_pdp
+
+    summaryPdps = []
+    start_time_spdp = time.time()
+    for i, feature in enumerate(controllableFeaturesNames):
+        summaryPdps.append(pdp.multiplyPdps(pdps[i]))
+    end_time_spdp = time.time()
+    spdp_execution_time = end_time_spdp - start_time_spdp
+
+    with open(csv_filename, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([dataset_name, pdp_execution_time, spdp_execution_time])
+
+
+    print(f"PDP Execution Time: {pdp_execution_time:.2f} seconds")
+    print(f"SPDP Execution Time: {spdp_execution_time:.2f} seconds")
+
+def collect_memory():
+
+    tracemalloc.start()
+    pdps = {}
+    for i, feature in enumerate(controllableFeaturesNames):
+        for j, reqClassifier in enumerate(models):
+            pdps[i] = []
+            pdps[i].append(pdp.partialDependencePlot(reqClassifier, X_train, [feature], "both"))
+
+    current_memory, pdp_peak_memory = tracemalloc.get_traced_memory()
+    pdp_peak_memory_mb = pdp_peak_memory / 1024 / 1024
+
+    tracemalloc.reset_peak()
+
+    summaryPdps = []
+
+    for i, feature in enumerate(controllableFeaturesNames):
+        summaryPdps.append(pdp.multiplyPdps(pdps[i]))
+
+    current_memory, spdp_peak_memory = tracemalloc.get_traced_memory()
+    spdp_peak_memory_mb = spdp_peak_memory / 1024 / 1024
+    tracemalloc.stop()
+
+    with open(csv_filename, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([dataset_name, pdp_peak_memory_mb, spdp_peak_memory_mb])
+
+    print(f"PDP Peak Memory Usage: {pdp_peak_memory_mb:.2f} MB")
+    print(f"SPDP Peak Memory Usage: {spdp_peak_memory_mb:.2f} MB")
+
+
 os.chdir(sys.path[0])
 warnings.filterwarnings("ignore")
-ds = pd.read_csv('../datasets/drivev3.csv')
+ds = pd.read_csv('../datasets/drive.csv')
 #featureNames = ['formation', 'flying_speed', 'countermeasure', 'weather', 'day_time', 'threat_range', '#threats']  #uav
 #featureNames = ['cruise speed', 'image resolution', 'illuminance', 'controls responsiveness', 'power',
 #                'smoke intensity', 'obstacle size', 'obstacle distance', 'firm obstacle']  #robot
 featureNames = ['car_speed','p_x','p_y', 'orientation','weather','road_shape'] #drive
 controllableFeaturesNames = featureNames[0:2]
 externalFeaturesNames = featureNames[2:6]
-controllableFeatureIndices = [0, 1]
+controllableFeatureIndices = [0]
 
 #reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5", "req_6", "req_7", "req_8", "req_9", "req_10",
-#        "req_11"]  #uav
+#       "req_11"]  #uav
 #reqs = ["req_0", "req_1", "req_2", "req_3"]  #robot
 reqs = ["req_0", "req_1", "req_2"] #drive
 
@@ -52,46 +109,17 @@ for req in reqs:
                                  np.ravel(y_train.loc[:, req]),
                                  np.ravel(y_test.loc[:, req])))
 
-dataset_name = "UAVDoublev2"
+dataset_name = "DriveDouble"
 
-csv_filename = "../results/memory_usage_pdp_peak.csv"
+csv_filename = "../results/profiling/time_pdp_spdp.csv"
 
 if not os.path.exists(csv_filename):
     with open(csv_filename, mode='w', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow(["Dataset", "PDP_Peak_Memory_MB", "SPDP_Peak_Memory_MB"])
-
-tracemalloc.start()
-
-pdps = {}
-for i, feature in enumerate(controllableFeaturesNames):
-    for j, reqClassifier in enumerate(models):
-        pdps[i] = []
-        pdps[i].append(pdp.partialDependencePlot(reqClassifier, X_train, [feature], "both"))
-
-current_memory, pdp_peak_memory = tracemalloc.get_traced_memory()  # Restituisce memoria attuale e picco in byte
-pdp_peak_memory_mb = pdp_peak_memory / 1024 / 1024  # Converti il picco in MB
-tracemalloc.stop()
-
-tracemalloc.start()
-
-summaryPdps = []
-for i, feature in enumerate(controllableFeaturesNames):
-    summaryPdps.append(pdp.multiplyPdps(pdps[i]))
-
-
-current_memory, spdp_peak_memory = tracemalloc.get_traced_memory()
-spdp_peak_memory_mb = spdp_peak_memory / 1024 / 1024
-
-tracemalloc.stop()
-
-with open(csv_filename, mode='a', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerow([dataset_name, pdp_peak_memory_mb, spdp_peak_memory_mb])
-
-print(f"PDP Peak Memory Usage: {pdp_peak_memory_mb:.2f} MB")
-print(f"SPDP Peak Memory Usage: {spdp_peak_memory_mb:.2f} MB")
-
+        writer.writerow(["Dataset", "PDP_Time", "SPDP_Time"])
+for _ in range(20):
+    collect_time()
+"""
 # Permutation Feature Importance Profiling
 model_profile_data_FI = []
 
@@ -157,3 +185,4 @@ for i, reqClassifier in enumerate(models):
 #with open(csv_filename, mode='a', newline='') as file:
 #    writer = csv.writer(file)
 #    writer.writerows(model_profile_data_SHAP)
+"""

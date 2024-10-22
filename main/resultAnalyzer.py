@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import ticker
+import seaborn as sns
 
 from util import readFromCsv, evaluateAdaptations
 
@@ -16,67 +17,160 @@ font = {'family': 'sans',
 matplotlib.rc('font', **font)
 
 
-def plotRankProfile(data, path, name='FI'):
-    df = pd.DataFrame(data)
+def rankingPerf(df, path=None, legendInside=False, time=False, name ='FI'):
 
-    model_counts = df['Model'].value_counts()
-    model_counts = model_counts[model_counts > 1]
-
-    for model in model_counts.index:
-        indices = df[df['Model'] == model].index
-        df.loc[indices, 'Model'] = [f"{model}_{i + 1}" for i in range(len(indices))]
-
-    plt.figure(figsize=(20, 15))
-    plt.plot(df['Model'], df['Memory Peak (MB)'], label='Peak Memory (MB)', marker='o')
-    plt.plot(df['Model'], df['Time'], label='Time (s)', marker='o')
-
-    plt.xlabel('Dataset')
-    plt.ylabel('Values')
-    if name == 'FI':
-        plt.title('FI Peak Memory Usage and Time by Dataset')
+    model_names = ['LogisticRegression', 'RandomForestClassifier', 'XGBClassifier',
+                   'GradientBoostingClassifier', 'NeuralNetwork']
+    if time:
+        metric = 'Time'
+        metric_label = "Time (s)"
     else:
-        plt.title('SHAP Peak Memory Usage and Time by Dataset')
-    plt.xticks(rotation=90)
-    plt.legend()
-    plt.grid()
-    plt.tight_layout()
-    if name == 'FI':
-        plt.savefig(path + 'FIMemoryTime.png')
+        metric = 'Memory Peak (MB)'
+        metric_label = "Peak Memory (MB)"
+
+    boxplot_data = []
+    for model in model_names:
+        boxplot_data.append(df[df['Model'] == model][metric].values)
+
+    fig = plt.figure(figsize=(15, 8))
+    ax1 = fig.add_subplot(111)
+
+    bp = ax1.boxplot(boxplot_data, patch_artist=True, notch=True, vert=True)
+
+    colors = ['#FF5733', '#6B8E23', '#1E90FF', '#FFD700', '#FF69B4']
+
+    for whisker in bp['whiskers']:
+        whisker.set(color='#8B008B', linewidth=1.5, linestyle=":")
+
+    for cap in bp['caps']:
+        cap.set(color='#8B008B', linewidth=2)
+
+    for median in bp['medians']:
+        median.set(color='black', linewidth=3)
+
+    for flier in bp['fliers']:
+        flier.set(marker='D', color='#e7298a', alpha=0.5)
+
+    for i, box in enumerate(bp['boxes']):
+        box.set_facecolor(colors[i % len(colors)])
+
+    for i in range(1, len(model_names)):
+        ax1.axvline(x=i + 0.5, color='gray', linestyle='--', linewidth=1.5)
+
+    box = ax1.get_position()
+    ax1.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+
+    legend_labels = model_names
+    ax1.set_yscale('log')
+
+    ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in colors[:len(model_names)]],
+                legend_labels,
+                ncol=2, loc='best', bbox_to_anchor=(0.5, -0.1))
+
+    if time:
+        if name == 'FI':
+            plt.title("Model Execution Time FI")
+        else:
+            plt.title("Model Execution Time SHAP")
     else:
-        plt.savefig(path + 'SHAPMemoryTime.png')
+        if name == 'FI':
+            plt.title("Memory Peak (MB) FI")
+        else:
+            plt.title("Memory Peak (MB) SHAP")
 
+    plt.ylabel(metric_label)
 
-def PDPPlotMemory(data, path):
-    memory_df = pd.DataFrame(data)
-    plt.figure(figsize=(10, 6))
-    plt.plot(memory_df['Dataset'], memory_df['PDP_Peak_Memory_MB'], label='PDP Peak Memory (MB)', marker='o')
-    plt.plot(memory_df['Dataset'], memory_df['SPDP_Peak_Memory_MB'], label='SPDP Peak Memory (MB)', marker='o')
+    if path is not None:
+        if time:
+            if name == 'FI':
+                plt.savefig(path + 'Model_Performance_Time_FI.png')
+            else:
+                plt.savefig(path + 'Model_Performance_Time_SHAP.png')
+        else:
+            if name == 'FI':
+                plt.savefig(path + "Model_Performance_Memory_FI.png")
+            else:
+                plt.savefig(path + "Model_Performance_Memory_SHAP.png")
 
-    plt.xlabel('Dataset')
-    plt.ylabel('Peak Memory (MB)')
-    plt.title('PDP and SPDP Peak Memory Usage by Dataset')
-    plt.xticks(rotation=90)
-    plt.legend()
-    plt.grid()
-    plt.tight_layout()
-    plt.savefig(path + 'PDPMemory.png')
     #plt.show()
 
 
-def PDPPlotTime(data, path):
-    df = pd.DataFrame(data)
-    plt.figure(figsize=(10, 6))
-    plt.plot(df['Dataset'], df['PDPTime'], label='PDP Time', marker='o')
-    plt.plot(df['Dataset'], df['SPDPTime'], label='SPDP Time', marker='o')
+def pdp_plot(df, path, legendInside=False, time=False):
+    dataset_names = ['Robot', 'RobotDouble', 'UAV', 'UAVDouble', 'Drive', 'DriveDouble']
+    values_per_dataset = 20
 
-    plt.xlabel('Dataset')
-    plt.ylabel('Time (seconds)')
-    plt.title('PDP and SPDP Times by Dataset')
-    plt.xticks(rotation=90)
-    plt.legend()
-    plt.grid()
-    plt.tight_layout()
-    plt.savefig(path + 'PDPTime.png')
+    if time:
+        pdp = df['PDP_Time']
+        spdp = df['SPDP_Time']
+        metric = "Iime (s)"
+    else:
+        pdp = df['PDP_Peak_Memory_MB']
+        spdp = df['SPDP_Peak_Memory_MB']
+        metric = "Peak Memory (MB)"
+    pdp_segments = []
+    spdp_segments = []
+
+    for i in range(0, len(pdp), values_per_dataset):
+        pdp_segments.append(pdp[i:i + values_per_dataset].values)
+        spdp_segments.append(spdp[i:i + values_per_dataset].values)
+
+    boxplot_data = []
+    for pdp_seg, spdp_seg in zip(pdp_segments, spdp_segments):
+        boxplot_data.append(pdp_seg)
+        boxplot_data.append(spdp_seg)
+
+    fig = plt.figure(figsize=(15, 8))
+    ax1 = fig.add_subplot(111)
+
+    bp = ax1.boxplot(boxplot_data, patch_artist=True, notch=True, vert=True)
+
+    colors = ['#FF5733', '#6B8E23']
+
+    for whisker in bp['whiskers']:
+        whisker.set(color='#8B008B', linewidth=1.5, linestyle=":")
+
+    for cap in bp['caps']:
+        cap.set(color='#8B008B', linewidth=2)
+
+    for median in bp['medians']:
+        median.set(color='black', linewidth=3)
+
+    for flier in bp['fliers']:
+        flier.set(marker='D', color='#e7298a', alpha=0.5)
+
+    for i, box in enumerate(bp['boxes']):
+        group_index = i % 2
+        box.set_facecolor(colors[group_index])
+
+    x_labels = []
+    for dataset in dataset_names:
+        x_labels.append(f'{dataset} PDP')
+        x_labels.append(f'{dataset} SPDP')
+
+    for i in range(1, len(dataset_names)):
+        ax1.axvline(x=2 * i + 0.5, color='gray', linestyle='--', linewidth=1.5)
+
+    box = ax1.get_position()
+    ax1.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+
+    legend_labels = ["PDP", "SPDP"]
+    plt.ylabel(metric)
+
+    ax1.legend([plt.Line2D([0], [0], color=color, lw=4) for color in colors[:2]],
+                legend_labels,
+                ncol=2, loc='best', bbox_to_anchor=(0.5, -0.1))
+
+    if time:
+        plt.title("PDP and SPDP time execution")
+    else:
+        plt.title("PDP and SPDP peak memory (MB)")
+
+    if path is not None:
+        if time:
+            plt.savefig(path + 'PDP and SPSD time')
+        else:
+            plt.savefig(path + "PDP and SPDP peak memory (MB)")
+
     #plt.show()
 
 
@@ -233,9 +327,13 @@ reqsNamesInGraphs = ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10"
 
 # read dataframe from csv
 
-resultsPdp = pd.read_csv('../results/profiling/memory_time_pdp.csv')
+memoryPdp = pd.read_csv('../results/profiling/memory_usage_pdp_peak.csv')
+memoryPdp = pd.DataFrame(memoryPdp)
+timePdp = pd.read_csv('../results/profiling/time_pdp_spdp.csv')
 profileFI = pd.read_csv('../results/profiling/FI_profile.csv')
+profileFI = pd.DataFrame(profileFI)
 profileSHAP = pd.read_csv('../results/profiling/SHAP_profile.csv')
+profileSHAP = pd.DataFrame(profileSHAP)
 results = readFromCsv(pathToResults + 'results.csv')
 resultsSHAP = readFromCsv(pathToResults + 'resultsSHAP.csv')
 resultsFI = readFromCsv(pathToResults + 'resultsFI.csv')
@@ -465,7 +563,9 @@ successRateOfPredictedSuccess = pd.DataFrame([[outcomes[customOutcomeNames][cust
 personalizedBarChart(successRateOfPredictedSuccess, "Success Rate of Predicted Success", nReqs, plotPath)
 
 memoryPlot(resultMemory, plotPath)
-PDPPlotTime(resultsPdp, '../results/')
-PDPPlotMemory(resultsPdp, '../results/')
-plotRankProfile(profileFI, '../results/')
-plotRankProfile(profileSHAP, '../results/', name='SHAP')
+pdp_plot(timePdp, '../results/', time=True)
+pdp_plot(memoryPdp, '../results/')
+rankingPerf(profileFI, '../results/', time=True)
+rankingPerf(profileFI, '../results/')
+rankingPerf(profileSHAP, '../results/', time=True, name="SHAP")
+rankingPerf(profileSHAP, '../results/', name="SHAP")
