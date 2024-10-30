@@ -74,19 +74,19 @@ def collect_memory():
 
 os.chdir(sys.path[0])
 warnings.filterwarnings("ignore")
-ds = pd.read_csv('../datasets/drive.csv')
+ds = pd.read_csv('../datasets/dataset5000.csv')
 #featureNames = ['formation', 'flying_speed', 'countermeasure', 'weather', 'day_time', 'threat_range', '#threats']  #uav
-#featureNames = ['cruise speed', 'image resolution', 'illuminance', 'controls responsiveness', 'power',
-#                'smoke intensity', 'obstacle size', 'obstacle distance', 'firm obstacle']  #robot
-featureNames = ['car_speed','p_x','p_y', 'orientation','weather','road_shape'] #drive
-controllableFeaturesNames = featureNames[0:2]
-externalFeaturesNames = featureNames[2:6]
-controllableFeatureIndices = [0]
+featureNames = ['cruise speed', 'image resolution', 'illuminance', 'controls responsiveness', 'power',
+                'smoke intensity', 'obstacle size', 'obstacle distance', 'firm obstacle']  #robot
+#featureNames = ['car_speed','p_x','p_y', 'orientation','weather','road_shape'] #drive
+controllableFeaturesNames = featureNames[0:4]
+externalFeaturesNames = featureNames[4:9]
+controllableFeatureIndices = [0, 1, 2, 3]
 
 #reqs = ["req_0", "req_1", "req_2", "req_3", "req_4", "req_5", "req_6", "req_7", "req_8", "req_9", "req_10",
 #       "req_11"]  #uav
-#reqs = ["req_0", "req_1", "req_2", "req_3"]  #robot
-reqs = ["req_0", "req_1", "req_2"] #drive
+reqs = ["req_0", "req_1", "req_2", "req_3"]  #robot
+#reqs = ["req_0", "req_1", "req_2"] #drive
 
 n_reqs = len(reqs)
 n_neighbors = 10
@@ -117,9 +117,9 @@ if not os.path.exists(csv_filename):
     with open(csv_filename, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Dataset", "PDP_Time", "SPDP_Time"])
-for _ in range(20):
-    collect_time()
-"""
+#for _ in range(20):
+#    collect_time()
+
 # Permutation Feature Importance Profiling
 model_profile_data_FI = []
 
@@ -168,6 +168,7 @@ if not os.path.exists(csv_filename):
 
 for i, reqClassifier in enumerate(models):
     #tracemalloc.reset_peak()
+    req = reqs[i]
 
     if not (isinstance(reqClassifier, LogisticRegression) or isinstance(reqClassifier, MLPClassifier)):
         start_time = time.time()
@@ -185,4 +186,3 @@ for i, reqClassifier in enumerate(models):
 #with open(csv_filename, mode='a', newline='') as file:
 #    writer = csv.writer(file)
 #    writer.writerows(model_profile_data_SHAP)
-"""

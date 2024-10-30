@@ -163,7 +163,7 @@ def pdp_plot(df, path, legendInside=False, time=False):
 
 def memoryPlot(data, path):
     dataMemory = {
-        'CustomMemory': data['CustomMemory'],
+        'XDAMemory': data['CustomMemory'],
         'SHAPMemory': data['SHAPMemory'],
         'FIMemory': data['FIMemory'],
         'FitestMemory': data['FitestMemory'],
@@ -298,14 +298,14 @@ def personalizedBarChart(data, name, nReq, path=None, show=False, percentage=Fal
 os.chdir(sys.path[0])
 evaluate = False
 
-pathToResults = ("../results/robotDouble/")
+pathToResults = ("../results/driveDouble/")
 
 #featureNames = ['formation', 'flying_speed', 'countermeasure', 'weather', 'day_time', 'threat_range', '#threats']
-featureNames = ['cruise speed','image resolution','illuminance','controls responsiveness','power','smoke intensity','obstacle size','obstacle distance','firm obstacle']
-#featureNames = ['car_speed', 'p_x', 'p_y', 'orientation', 'weather', 'road_shape']
+#featureNames = ['cruise speed','image resolution','illuminance','controls responsiveness','power','smoke intensity','obstacle size','obstacle distance','firm obstacle']
+featureNames = ['car_speed', 'p_x', 'p_y', 'orientation', 'weather', 'road_shape']
 
-reqs = ["req_0", "req_1", "req_2", "req_3"]
-reqsNamesInGraphs = ["R1", "R2", "R3", "R4"]
+reqs = ["req_0", "req_1", "req_2"]
+reqsNamesInGraphs = ["R1", "R2", "R3"]
 
 # read dataframe from csv
 

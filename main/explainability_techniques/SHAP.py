@@ -5,6 +5,8 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neural_network import MLPClassifier
 from xgboost import XGBClassifier
+import matplotlib.pyplot as plt
+
 
 
 def shapClassifier(model, X_train, controllableFeatures):
@@ -37,5 +39,5 @@ def shapClassifier(model, X_train, controllableFeatures):
     features_importance = list(zip(controllableFeatures, mean_shap_values))
 
     scores = np.array([np.sum(tup[1]) for tup in features_importance])
-
+    
     return scores
