@@ -46,6 +46,8 @@ Go to main/resultAnalyzer.py
 * lines 303-304-305: you can specify the features used (first for uav, second for rescue robot and the last for autonomous driving)
 * line 307-308-309-310: you can specify which requirements are used (first for uav, second for rescue robot and the last for autonomous driving)
 
+```python main/resultAnalyzer.py```
+
 ## Profiling
 Inside main/offlineProfiler.py
 
@@ -53,5 +55,7 @@ Inside main/offlineProfiler.py
 * lines 78-79-80-81: you can specify the features used (first for uav, second for rescue robot and the last for autonomous driving)
 * lines 86-87-88-89: you can specify the requirements used (first for uav, second for rescue robot and the last autonomous driving)
 * lines 120-121: to collect data (time and memory) on PDP and SPDP construction
-* lines from 134 to 188: to collect data (time and memory) on SHAP and permutation feature importance 
+* lines from 134 to 188: to collect data (time and memory) on SHAP and permutation feature importance
+
+```python main/offlineProfiler.py```
 
