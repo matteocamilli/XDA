@@ -37,6 +37,16 @@ Inside main/main.py:
 * line 91: you can specify the target success probabilities for each requirement
 * line 181: you can specify the number of tests to do
 
+There are six approach to run adaptation tests that can be used all together or you can decide which one to use:
+
+* from line 113 to line 138 there are all six approach (XDA, XDAv2 SHAP. XDAv2 FI, NSGA-III, Fitest and Random), if you want to not use one or more of them you can comment the lines corresponding to that approach
+* from line 194 to 212: code for XDA approach (if you don't want to use it you have to comment this part)
+* from line 219 to line 232: code for XDAv2 SHAP approach
+* from line 234 to line 252: code for XDAv2 FI approach
+* from line 254 to line to line 272: code for Fitest approach
+* from line 274 to line 306: code for Random approach
+* from line 430 to line 502: you have to comment the results of approaches you don't want to execute to not incur in errors
+
 ```python main/main.py```
 
 ## Generate Plots
