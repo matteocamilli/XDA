@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 import numpy as np
 import pandas as pd
@@ -29,9 +30,13 @@ def evaluateDataset(dataset, name):
     np.save("./starting_combinations.npy", dataset)
 
     if os.name == "posix":
-        os.system("./evaluate_adaptations.sh ./starting_combinations.npy")
+        venv = "source ../venv/bin/activate &&"    # Adjust path to project venv ("" if no venv)
+        command = f"{venv} ./evaluate_adaptations.sh ./starting_combinations.npy"
+        subprocess.run(command, shell=True, executable="/bin/bash")
     else:
-        os.system("evaluate_adaptations.bat ./starting_combinations.npy")
+        venv = "..\\venv\\Scripts\\activate &&"    # Adjust path to project venv ("" if no venv)
+        command = f"{venv} evaluate_adaptations.bat ./starting_combinations.npy"
+        subprocess.run(command, shell=True)
 
     # Rename the file
     os.chdir("..")
