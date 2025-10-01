@@ -1,5 +1,9 @@
 # Explanation-Driven Self-Adaptations (XDA) Replication Package
 
+## Our papers
+- [Efficient Self-Adaptation through Explanation-Driven White-Box Optimization](https://dl.acm.org/doi/10.1145/3737648)
+- [Explanation-driven Self-adaptation using Model-agnostic Interpretable Machine Learning](https://dl.acm.org/doi/10.1145/3643915.3644085)
+
 ## Install Requirements
 ```pip install -r requirements.txt```
 
